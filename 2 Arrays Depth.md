@@ -1826,4 +1826,711 @@ def threeSum(nums):
         right = len(nums) - 1
         target = -nums[i]  # We need nums[left] + nums[right] = target
         
-        while
+        ```python
+        while left < right:
+            current_sum = nums[left] + nums[right]
+            
+            if current_sum < target:
+                # Sum too small, need larger numbers
+                left += 1
+            elif current_sum > target:
+                # Sum too large, need smaller numbers
+                right -= 1
+            else:
+                # Found a triplet!
+                result.append([nums[i], nums[left], nums[right]])
+                
+                # Skip duplicates for left pointer
+                while left < right and nums[left] == nums[left + 1]:
+                    left += 1
+                # Skip duplicates for right pointer
+                while left < right and nums[right] == nums[right - 1]:
+                    right -= 1
+                
+                # Move both pointers
+                left += 1
+                right -= 1
+        
+    return result
+```
+
+**What is `continue`?**
+
+`continue` skips the rest of the current loop iteration and moves to the next:
+```python
+for i in range(5):
+    if i == 2:
+        continue  # Skip printing 2
+    print(i)
+# Output: 0, 1, 3, 4
+```
+
+**What is `break`?**
+
+`break` exits the loop entirely:
+```python
+for i in range(5):
+    if i == 3:
+        break  # Stop the loop
+    print(i)
+# Output: 0, 1, 2
+```
+
+**Analysis**:
+- **Time**: O(n²) - Outer loop O(n), inner two-pointer O(n)
+- **Space**: O(1) or O(n) depending on sort implementation
+
+**Why Sorting Helps with Duplicates**:
+
+After sorting, duplicate values are next to each other:
+```
+Before: [-1, 0, 1, 2, -1, -4]
+After:  [-4, -1, -1, 0, 1, 2]
+```
+
+Now we can easily skip duplicates with:
+```python
+if i > 0 and nums[i] == nums[i - 1]:
+    continue  # Same as previous, skip!
+```
+
+**Detailed Walkthrough for [-1, 0, 1, 2, -1, -4]**:
+
+```
+After sorting: [-4, -1, -1, 0, 1, 2]
+                 0    1    2   3  4  5  (indices)
+
+=== i = 0, nums[i] = -4 ===
+target = -(-4) = 4
+left = 1, right = 5
+
+  nums[1] + nums[5] = -1 + 2 = 1 < 4
+  left = 2
+  
+  nums[2] + nums[5] = -1 + 2 = 1 < 4
+  left = 3
+  
+  nums[3] + nums[5] = 0 + 2 = 2 < 4
+  left = 4
+  
+  nums[4] + nums[5] = 1 + 2 = 3 < 4
+  left = 5
+  
+  left >= right, exit while loop
+
+No triplets with -4.
+
+=== i = 1, nums[i] = -1 ===
+target = -(-1) = 1
+left = 2, right = 5
+
+  nums[2] + nums[5] = -1 + 2 = 1 == 1 ✓
+  Found triplet: [-1, -1, 2]
+  result = [[-1, -1, 2]]
+  
+  Skip duplicate lefts: nums[2] == nums[3]? -1 == 0? No
+  Skip duplicate rights: nums[5] == nums[4]? 2 == 1? No
+  
+  left = 3, right = 4
+  
+  nums[3] + nums[4] = 0 + 1 = 1 == 1 ✓
+  Found triplet: [-1, 0, 1]
+  result = [[-1, -1, 2], [-1, 0, 1]]
+  
+  left = 4, right = 3
+  left >= right, exit while loop
+
+=== i = 2, nums[i] = -1 ===
+nums[2] == nums[1]? -1 == -1? YES!
+Skip (duplicate of previous i)
+
+=== i = 3, nums[i] = 0 ===
+target = 0
+left = 4, right = 5
+
+  nums[4] + nums[5] = 1 + 2 = 3 > 0
+  right = 4
+  
+  left >= right, exit while loop
+
+No triplets with 0.
+
+=== i = 4 ===
+i >= len(nums) - 2, loop ends
+
+Final: [[-1, -1, 2], [-1, 0, 1]] ✓
+```
+
+---
+
+### 5.4 Longest Mountain in Array
+
+📌 **LeetCode Link**: [845. Longest Mountain in Array](https://leetcode.com/problems/longest-mountain-in-array/)
+
+#### Problem Statement
+
+You may recall that an array `arr` is a **mountain array** if and only if:
+- `arr.length >= 3`
+- There exists some index `i` (0-indexed) with `0 < i < arr.length - 1` such that:
+  - `arr[0] < arr[1] < ... < arr[i - 1] < arr[i]` (strictly increasing)
+  - `arr[i] > arr[i + 1] > ... > arr[arr.length - 1]` (strictly decreasing)
+
+Given an integer array `arr`, return the length of the longest subarray which is a mountain. Return 0 if there is no mountain subarray.
+
+#### Visual Understanding
+
+```
+A mountain looks like this:
+
+        /\
+       /  \
+      /    \
+     /      \
+    
+It goes UP to a peak, then DOWN.
+```
+
+#### Examples
+
+```
+Example 1:
+Input: arr = [2, 1, 4, 7, 3, 2, 5]
+Output: 5
+Explanation: The longest mountain is [1, 4, 7, 3, 2] with length 5
+
+        7
+       / \
+      4   3
+     /     \
+    1       2
+
+Example 2:
+Input: arr = [2, 2, 2]
+Output: 0
+Explanation: No mountain (no strictly increasing then decreasing)
+```
+
+#### The Strategy
+
+1. Find each **peak** (element greater than both neighbors)
+2. From each peak, expand **left** (while increasing) and **right** (while decreasing)
+3. Calculate mountain length and track the maximum
+
+```python
+def longestMountain(arr):
+    n = len(arr)
+    if n < 3:
+        return 0
+    
+    longest = 0
+    
+    for i in range(1, n - 1):  # Peaks can't be at edges
+        # Check if current position is a peak
+        if arr[i] > arr[i - 1] and arr[i] > arr[i + 1]:
+            # Expand left (go down the increasing slope)
+            left = i
+            while left > 0 and arr[left] > arr[left - 1]:
+                left -= 1
+            
+            # Expand right (go down the decreasing slope)
+            right = i
+            while right < n - 1 and arr[right] > arr[right + 1]:
+                right += 1
+            
+            # Calculate length
+            length = right - left + 1
+            longest = max(longest, length)
+    
+    return longest
+```
+
+**Analysis**:
+- **Time**: O(n) on average (each element visited at most twice)
+- **Space**: O(1)
+
+**Detailed Walkthrough for [2, 1, 4, 7, 3, 2, 5]**:
+
+```
+Array: [2, 1, 4, 7, 3, 2, 5]
+Index:  0  1  2  3  4  5  6
+
+=== i = 1, arr[1] = 1 ===
+Is 1 > 2 (left)? No
+Not a peak, skip.
+
+=== i = 2, arr[2] = 4 ===
+Is 4 > 1 (left)? Yes
+Is 4 > 7 (right)? No
+Not a peak, skip.
+
+=== i = 3, arr[3] = 7 ===
+Is 7 > 4 (left)? Yes
+Is 7 > 3 (right)? Yes
+IT'S A PEAK! 🏔️
+
+Expand left from i=3:
+  left = 3
+  arr[3]=7 > arr[2]=4? Yes, left = 2
+  arr[2]=4 > arr[1]=1? Yes, left = 1
+  arr[1]=1 > arr[0]=2? No, stop
+  Final left = 1
+
+Expand right from i=3:
+  right = 3
+  arr[3]=7 > arr[4]=3? Yes, right = 4
+  arr[4]=3 > arr[5]=2? Yes, right = 5
+  arr[5]=2 > arr[6]=5? No, stop
+  Final right = 5
+
+Length = 5 - 1 + 1 = 5
+longest = 5
+
+=== i = 4, arr[4] = 3 ===
+Is 3 > 7 (left)? No
+Not a peak, skip.
+
+=== i = 5, arr[5] = 2 ===
+Is 2 > 3 (left)? No
+Not a peak, skip.
+
+Final: 5 ✓
+```
+
+---
+
+## 6. Sliding Window Pattern
+
+The **sliding window** technique maintains a "window" (a contiguous subarray) that slides through the data. It's perfect for:
+- Finding subarrays with specific properties
+- Maximum/minimum values in subarrays
+- Substring problems
+
+### Two Types of Sliding Windows
+
+| Type | Window Size | When to Use |
+|------|-------------|-------------|
+| **Fixed** | Constant size k | "Find max sum of k elements" |
+| **Dynamic** | Changes based on condition | "Find shortest subarray with sum ≥ target" |
+
+---
+
+### 6.1 Contains Duplicate II
+
+📌 **LeetCode Link**: [219. Contains Duplicate II](https://leetcode.com/problems/contains-duplicate-ii/)
+
+#### Problem Statement
+
+Given an integer array `nums` and an integer `k`, return `true` if there are two **distinct indices** `i` and `j` in the array such that:
+- `nums[i] == nums[j]` (same value)
+- `|i - j| <= k` (indices are at most k apart)
+
+#### Examples
+
+```
+Example 1:
+Input: nums = [1, 2, 3, 1], k = 3
+Output: true
+Explanation: nums[0] = nums[3] = 1, and |0 - 3| = 3 <= 3
+
+Example 2:
+Input: nums = [1, 0, 1, 1], k = 1
+Output: true
+Explanation: nums[2] = nums[3] = 1, and |2 - 3| = 1 <= 1
+
+Example 3:
+Input: nums = [1, 2, 3, 1, 2, 3], k = 2
+Output: false
+Explanation: The only duplicates are 3 apart (indices 0&3, 1&4, 2&5)
+```
+
+#### The Strategy
+
+Maintain a **sliding window of size k** using a set:
+- If we find a duplicate within the window → return true
+- If window exceeds size k → remove the oldest element
+
+```python
+def containsNearbyDuplicate(nums, k):
+    window = set()  # Current window of elements
+    
+    for i, num in enumerate(nums):
+        # Check if num already exists in window
+        if num in window:
+            return True
+        
+        # Add current number to window
+        window.add(num)
+        
+        # If window is too big, remove oldest element
+        if len(window) > k:
+            window.remove(nums[i - k])
+    
+    return False
+```
+
+**Analysis**:
+- **Time**: O(n) - Single pass
+- **Space**: O(k) - Window stores at most k elements
+
+**Detailed Walkthrough for [1, 2, 3, 1], k = 3**:
+
+```
+Window can hold at most k = 3 elements
+
+i=0, num=1:
+  Is 1 in window? No (window is empty)
+  Add 1: window = {1}
+  len(1) <= 3, no removal needed
+
+i=1, num=2:
+  Is 2 in window? No
+  Add 2: window = {1, 2}
+  len(2) <= 3, no removal needed
+
+i=2, num=3:
+  Is 3 in window? No
+  Add 3: window = {1, 2, 3}
+  len(3) <= 3, no removal needed
+
+i=3, num=1:
+  Is 1 in window? YES! ✓
+  Return true
+
+The 1 at index 3 found the 1 at index 0 within the window.
+|3 - 0| = 3 <= k = 3 ✓
+```
+
+**Walkthrough for [1, 2, 3, 1, 2, 3], k = 2**:
+
+```
+i=0, num=1: window = {1}
+i=1, num=2: window = {1, 2}
+i=2, num=3: 
+  window = {1, 2, 3}
+  len(3) > k=2, remove nums[2-2] = nums[0] = 1
+  window = {2, 3}
+
+i=3, num=1:
+  Is 1 in {2, 3}? No
+  window = {2, 3, 1}
+  len(3) > k=2, remove nums[3-2] = nums[1] = 2
+  window = {3, 1}
+
+i=4, num=2:
+  Is 2 in {3, 1}? No
+  window = {3, 1, 2}
+  len(3) > k=2, remove nums[4-2] = nums[2] = 3
+  window = {1, 2}
+
+i=5, num=3:
+  Is 3 in {1, 2}? No
+  window = {1, 2, 3}
+  len(3) > k=2, remove nums[5-2] = nums[3] = 1
+  window = {2, 3}
+
+Loop ends, no duplicate found within k distance.
+Return false ✓
+```
+
+---
+
+### 6.2 Minimum Absolute Difference
+
+📌 **LeetCode Link**: [1200. Minimum Absolute Difference](https://leetcode.com/problems/minimum-absolute-difference/)
+
+#### Problem Statement
+
+Given an array of **distinct** integers `arr`, find all pairs of elements with the **minimum absolute difference** of any two elements.
+
+Return a list of pairs in ascending order (with respect to pairs), each pair `[a, b]` follows:
+- `a, b` are from arr
+- `a < b`
+- `b - a` equals the minimum absolute difference of any two elements in arr
+
+#### Examples
+
+```
+Example 1:
+Input: arr = [4, 2, 1, 3]
+Output: [[1, 2], [2, 3], [3, 4]]
+Explanation: Minimum difference is 1. All consecutive pairs have difference 1.
+
+Example 2:
+Input: arr = [1, 3, 6, 10, 15]
+Output: [[1, 3]]
+Explanation: Minimum difference is 2 (between 1 and 3).
+
+Example 3:
+Input: arr = [3, 8, -10, 23, 19, -4, -14, 27]
+Output: [[-14, -10], [19, 23], [23, 27]]
+Explanation: Minimum difference is 4.
+```
+
+#### The Key Insight
+
+After sorting, the minimum difference MUST be between **adjacent elements**!
+
+Why? If `a < b < c`, then:
+- `c - a = (c - b) + (b - a)`
+- So `c - a` is always greater than `b - a`
+
+```python
+def minimumAbsDifference(arr):
+    arr.sort()
+    
+    min_diff = float('inf')
+    result = []
+    
+    for i in range(1, len(arr)):
+        diff = arr[i] - arr[i - 1]
+        
+        if diff < min_diff:
+            # Found new minimum, reset result
+            min_diff = diff
+            result = [[arr[i - 1], arr[i]]]
+        elif diff == min_diff:
+            # Same minimum, add to result
+            result.append([arr[i - 1], arr[i]])
+    
+    return result
+```
+
+**Analysis**:
+- **Time**: O(n log n) - Sorting dominates
+- **Space**: O(n) - For sorted array and result
+
+**Detailed Walkthrough for [4, 2, 1, 3]**:
+
+```
+After sorting: [1, 2, 3, 4]
+
+min_diff = infinity
+result = []
+
+i=1:
+  diff = 2 - 1 = 1
+  1 < infinity
+  min_diff = 1
+  result = [[1, 2]]
+
+i=2:
+  diff = 3 - 2 = 1
+  1 == 1 (equal to min_diff)
+  result = [[1, 2], [2, 3]]
+
+i=3:
+  diff = 4 - 3 = 1
+  1 == 1 (equal to min_diff)
+  result = [[1, 2], [2, 3], [3, 4]]
+
+Final: [[1, 2], [2, 3], [3, 4]] ✓
+```
+
+---
+
+### 6.3 Minimum Size Subarray Sum (Medium)
+
+📌 **LeetCode Link**: [209. Minimum Size Subarray Sum](https://leetcode.com/problems/minimum-size-subarray-sum/)
+
+#### Problem Statement
+
+Given an array of **positive integers** `nums` and a positive integer `target`, return the **minimal length** of a subarray whose sum is **greater than or equal to** `target`. If there is no such subarray, return 0.
+
+#### Examples
+
+```
+Example 1:
+Input: target = 7, nums = [2, 3, 1, 2, 4, 3]
+Output: 2
+Explanation: [4, 3] has sum 7 with minimum length 2
+
+Example 2:
+Input: target = 4, nums = [1, 4, 4]
+Output: 1
+Explanation: [4] has sum 4 with minimum length 1
+
+Example 3:
+Input: target = 11, nums = [1, 1, 1, 1, 1, 1, 1, 1]
+Output: 0
+Explanation: No subarray sums to 11 or more
+```
+
+#### Understanding "Subarray"
+
+A **subarray** is a contiguous (connected) portion of an array:
+```
+Array: [2, 3, 1, 2, 4, 3]
+
+Valid subarrays: [2], [2,3], [3,1,2], [1,2,4,3], etc.
+Invalid (not contiguous): [2, 1], [3, 4] (elements must be next to each other)
+```
+
+#### The Strategy: Dynamic Sliding Window
+
+1. **Expand** the window by moving the right pointer (add elements)
+2. When sum >= target, **shrink** the window from the left (to find minimum)
+3. Track the minimum length found
+
+```python
+def minSubArrayLen(target, nums):
+    min_length = float('inf')  # Track minimum length found
+    left = 0                    # Left edge of window
+    current_sum = 0            # Sum of current window
+    
+    for right in range(len(nums)):
+        # Expand window: add right element
+        current_sum += nums[right]
+        
+        # Shrink window while sum meets target
+        while current_sum >= target:
+            # Update minimum length
+            window_length = right - left + 1
+            min_length = min(min_length, window_length)
+            
+            # Shrink: remove left element
+            current_sum -= nums[left]
+            left += 1
+    
+    # Return 0 if no valid subarray found
+    return min_length if min_length != float('inf') else 0
+```
+
+**Analysis**:
+- **Time**: O(n) - Each element is added once and removed at most once
+- **Space**: O(1)
+
+**Why is this O(n) and not O(n²)?**
+
+Even though there's a `while` loop inside the `for` loop, the `left` pointer only moves **forward** (never backward). Each element is processed at most twice:
+- Once when `right` reaches it (added to sum)
+- Once when `left` reaches it (removed from sum)
+
+Total operations: at most 2n = O(n)
+
+**Detailed Walkthrough for target=7, nums=[2, 3, 1, 2, 4, 3]**:
+
+```
+min_length = infinity
+left = 0
+current_sum = 0
+
+=== right = 0, nums[0] = 2 ===
+current_sum = 0 + 2 = 2
+2 < 7, don't shrink
+Window: [2], sum=2
+
+=== right = 1, nums[1] = 3 ===
+current_sum = 2 + 3 = 5
+5 < 7, don't shrink
+Window: [2, 3], sum=5
+
+=== right = 2, nums[2] = 1 ===
+current_sum = 5 + 1 = 6
+6 < 7, don't shrink
+Window: [2, 3, 1], sum=6
+
+=== right = 3, nums[3] = 2 ===
+current_sum = 6 + 2 = 8
+8 >= 7, START SHRINKING!
+
+  Window: [2, 3, 1, 2], length = 3-0+1 = 4
+  min_length = min(inf, 4) = 4
+  Remove nums[0]=2: current_sum = 8-2 = 6
+  left = 1
+  
+  6 < 7, stop shrinking
+Window: [3, 1, 2], sum=6
+
+=== right = 4, nums[4] = 4 ===
+current_sum = 6 + 4 = 10
+10 >= 7, SHRINK!
+
+  Window: [3, 1, 2, 4], length = 4-1+1 = 4
+  min_length = min(4, 4) = 4
+  Remove nums[1]=3: current_sum = 10-3 = 7
+  left = 2
+  
+  7 >= 7, SHRINK AGAIN!
+  
+  Window: [1, 2, 4], length = 4-2+1 = 3
+  min_length = min(4, 3) = 3
+  Remove nums[2]=1: current_sum = 7-1 = 6
+  left = 3
+  
+  6 < 7, stop shrinking
+Window: [2, 4], sum=6
+
+=== right = 5, nums[5] = 3 ===
+current_sum = 6 + 3 = 9
+9 >= 7, SHRINK!
+
+  Window: [2, 4, 3], length = 5-3+1 = 3
+  min_length = min(3, 3) = 3
+  Remove nums[3]=2: current_sum = 9-2 = 7
+  left = 4
+  
+  7 >= 7, SHRINK AGAIN!
+  
+  Window: [4, 3], length = 5-4+1 = 2
+  min_length = min(3, 2) = 2 ✓
+  Remove nums[4]=4: current_sum = 7-4 = 3
+  left = 5
+  
+  3 < 7, stop shrinking
+Window: [3], sum=3
+
+Loop ends.
+
+Final: min_length = 2 ✓
+```
+
+---
+
+## 7. Summary: Array Patterns Cheat Sheet
+
+| Pattern | When to Use | Key Technique | Time |
+|---------|-------------|---------------|------|
+| **Hash Set** | Find duplicates, check existence | O(1) lookup | O(n) |
+| **Hash Map** | Store value-index pairs, counting | O(1) lookup | O(n) |
+| **Sorting** | Order matters, find pairs | Sort first, then scan | O(n log n) |
+| **Two Pointers (Opposite)** | Sorted array, find pairs | Move from both ends | O(n) |
+| **Two Pointers (Same Dir)** | Find peak, mountain | Expand from point | O(n) |
+| **Sliding Window (Fixed)** | K-size subarray problems | Maintain window of size k | O(n) |
+| **Sliding Window (Dynamic)** | Min/max subarray with condition | Expand right, shrink left | O(n) |
+| **In-Place Marking** | Find missing in range [1,n] | Use array as hash table | O(n) |
+
+---
+
+## 8. Practice Checklist
+
+### Easy Problems
+- [ ] [217. Contains Duplicate](https://leetcode.com/problems/contains-duplicate/)
+- [ ] [268. Missing Number](https://leetcode.com/problems/missing-number/)
+- [ ] [448. Find All Numbers Disappeared](https://leetcode.com/problems/find-all-numbers-disappeared-in-an-array/)
+- [ ] [1. Two Sum](https://leetcode.com/problems/two-sum/)
+- [ ] [121. Best Time to Buy and Sell Stock](https://leetcode.com/problems/best-time-to-buy-and-sell-stock/)
+- [ ] [977. Squares of a Sorted Array](https://leetcode.com/problems/squares-of-a-sorted-array/)
+- [ ] [1365. How Many Numbers Are Smaller](https://leetcode.com/problems/how-many-numbers-are-smaller-than-the-current-number/)
+- [ ] [1266. Minimum Time Visiting All Points](https://leetcode.com/problems/minimum-time-visiting-all-points/)
+- [ ] [219. Contains Duplicate II](https://leetcode.com/problems/contains-duplicate-ii/)
+- [ ] [1200. Minimum Absolute Difference](https://leetcode.com/problems/minimum-absolute-difference/)
+
+### Medium Problems
+- [ ] [15. 3Sum](https://leetcode.com/problems/3sum/)
+- [ ] [54. Spiral Matrix](https://leetcode.com/problems/spiral-matrix/)
+- [ ] [200. Number of Islands](https://leetcode.com/problems/number-of-islands/)
+- [ ] [845. Longest Mountain in Array](https://leetcode.com/problems/longest-mountain-in-array/)
+- [ ] [209. Minimum Size Subarray Sum](https://leetcode.com/problems/minimum-size-subarray-sum/)
+
+---
+
+## 9. Key Takeaways
+
+1. **Master the basics first**: Contains Duplicate, Two Sum, Missing Number
+2. **Sets and dictionaries are your best friends**: Trade space for time
+3. **Sorting unlocks many optimizations**: Three Sum, Minimum Absolute Difference
+4. **Two pointers work on sorted data**: Saves O(n) compared to brute force
+5. **Sliding window for contiguous subarrays**: Fixed or dynamic based on problem
+6. **Draw it out**: Especially for Spiral Matrix, Number of Islands
+7. **Think about edge cases**: Empty arrays, single elements, all same values
+8. **Practice, practice, practice**: Understanding comes from doing, not just reading
