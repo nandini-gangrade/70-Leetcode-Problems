@@ -1594,12 +1594,794 @@ Answer: dp[5][3] = 3 ✓
 
 ---
 
-### 9.4 Word Break
+## 9.4 Word Break 
 
 📌 **LeetCode Link**: [139. Word Break](https://leetcode.com/problems/word-break/)
 
-#### Problem Statement
+### 9.4.1 Understanding the Problem from Scratch
 
-Given a string `s` and a dictionary of strings `wordDict`, return `true` if `s` can be segmented into a space-separated sequence of one or more dictionary words.
+#### What is the problem asking?
 
-**Note**: The same word in the dictionary may be reused multiple times.
+Imagine you have a string with no spaces, like: `"leetcode"`
+
+And you have a dictionary of valid words: `["leet", "code"]`
+
+**Question**: Can you break the string into valid dictionary words?
+
+In this case: `"leet" + "code" = "leetcode"` ✓ YES!
+
+#### More Examples to Build Intuition
+
+```
+Example 1:
+s = "leetcode"
+wordDict = ["leet", "code"]
+Answer: true
+Why? "leet" + "code" = "leetcode" ✓
+
+Example 2:
+s = "applepenapple"
+wordDict = ["apple", "pen"]
+Answer: true
+Why? "apple" + "pen" + "apple" = "applepenapple" ✓
+Notice: We can reuse "apple"!
+
+Example 3:
+s = "catsandog"
+wordDict = ["cats", "dog", "sand", "and", "cat"]
+Answer: false
+Why? No valid way to break it up!
+- "cat" + "sandog" ✗ ("sandog" not in dict)
+- "cats" + "andog" ✗ ("andog" not in dict)
+- "cats" + "and" + "og" ✗ ("og" not in dict)
+```
+
+#### Key Things to Notice
+
+1. **We can use the same word multiple times** (like "apple" twice)
+2. **Order matters** - we can't rearrange letters
+3. **We must use the ENTIRE string** - no leftover characters
+
+### 9.4.2 How My Brain Approaches This Problem
+
+#### Step 1: The First Instinct (Usually Wrong but Teaches Us)
+
+**My first thought**: "Let me try words from the dictionary one by one!"
+
+```python
+def word_break_naive(s, wordDict):
+    # Try each word in dictionary
+    for word in wordDict:
+        if s.startswith(word):  # Does string start with this word?
+            return True
+    return False
+```
+
+**Testing this idea**:
+```
+s = "leetcode"
+wordDict = ["leet", "code"]
+
+"leetcode".startswith("leet")? YES!
+Return True... 
+
+Wait, that's correct by luck! Let me try another:
+
+s = "catsandog"
+wordDict = ["cats", "dog", "sand", "and", "cat"]
+
+"catsandog".startswith("cats")? YES!
+Return True...
+
+But the answer should be FALSE! This approach is WRONG!
+```
+
+**Why this fails**: Just because the string STARTS with a dictionary word doesn't mean we can break up the REST of the string!
+
+#### Step 2: The "Recursive Thinking" Breakthrough
+
+**Better thought**: "If I find a word at the start, I need to check if the REMAINING part can also be broken down!"
+
+Let me trace through this mentally:
+
+```
+s = "leetcode", wordDict = ["leet", "code"]
+
+1. Does "leetcode" start with "leet"? YES!
+2. After using "leet", remainder is "code"
+3. Can "code" be broken down? (Check recursively)
+4. Does "code" start with "leet"? NO
+5. Does "code" start with "code"? YES!
+6. After using "code", remainder is "" (empty)
+7. Empty string is valid! ✓
+
+Result: TRUE
+```
+
+**This is the RECURSIVE APPROACH!**
+
+### 9.4.3 Approach 1: Brute Force Recursion (The Natural First Solution)
+
+#### Why would I think of recursion?
+
+Because the problem has a **self-similar structure**:
+- To break "leetcode", I break off "leet" and solve "code"
+- To break "code", I break off "code" and solve ""
+- To break "", it's already done!
+
+**It's like Russian nesting dolls** - each doll contains a smaller version of the same problem!
+
+#### Writing the Recursive Code
+
+```python
+def wordBreak_recursive(s, wordDict):
+    # Base case: empty string is always valid
+    if not s:
+        return True
+    
+    # Try each word in dictionary
+    for word in wordDict:
+        # Check if string starts with this word
+        if s.startswith(word):
+            # Recursively check the remainder
+            remaining = s[len(word):]  # Everything after the word
+            if wordBreak_recursive(remaining, wordDict):
+                return True
+    
+    # No word worked
+    return False
+```
+
+#### Let me explain EVERY line in detail:
+
+**Line 1: `if not s:`**
+- `not s` means "if s is empty"
+- In Python, empty string `""` is considered "falsy"
+- So `not ""` is `True`
+- This is our BASE CASE - when do we stop recursing?
+- An empty string needs zero words to break it up, so it's valid!
+
+**Line 5: `for word in wordDict:`**
+- We try EVERY word in our dictionary
+- This ensures we don't miss any possible way to break the string
+
+**Line 7: `if s.startswith(word):`**
+- `startswith()` is a Python string method
+- `"leetcode".startswith("leet")` returns `True`
+- `"leetcode".startswith("code")` returns `False`
+- We only proceed if the word actually matches the beginning!
+
+**Line 9: `remaining = s[len(word):]`**
+- `len(word)` gives us the length of the word
+- `s[len(word):]` is string slicing - "give me everything from position len(word) onwards"
+- Example: `"leetcode"[4:]` gives us `"code"` (everything after position 4)
+
+**Line 10: `if wordBreak_recursive(remaining, wordDict):`**
+- This is the RECURSIVE CALL
+- We're asking: "Can the remainder be broken up?"
+- If yes, we found a valid solution!
+
+#### Detailed Walkthrough (Let's Trace Execution)
+
+```
+s = "leetcode", wordDict = ["leet", "code"]
+
+Call 1: wordBreak_recursive("leetcode", ["leet", "code"])
+  └─ s = "leetcode", not empty
+  └─ Try word "leet"
+     └─ "leetcode".startswith("leet")? YES
+     └─ remaining = "leetcode"[4:] = "code"
+     └─ Call 2: wordBreak_recursive("code", ["leet", "code"])
+        └─ s = "code", not empty
+        └─ Try word "leet"
+           └─ "code".startswith("leet")? NO
+        └─ Try word "code"
+           └─ "code".startswith("code")? YES
+           └─ remaining = "code"[4:] = ""
+           └─ Call 3: wordBreak_recursive("", ["leet", "code"])
+              └─ s = "" (empty!)
+              └─ Return TRUE (base case)
+           └─ Returns TRUE to Call 2
+        └─ Returns TRUE to Call 1
+  └─ Returns TRUE
+
+Final answer: TRUE ✓
+```
+
+#### Why This Solution is SLOW
+
+Let me show you what happens with a trickier example:
+
+```
+s = "aaaaaaa" (7 a's)
+wordDict = ["a", "aa", "aaa", "aaaa"]
+
+The recursion tree explodes:
+
+                    "aaaaaaa"
+                   /    |    \    \
+         "aaaaaa" "aaaaa" "aaaa" "aaa"
+         /  |  \    
+    "aaaaa" "aaaa" "aaa"
+      ...
+```
+
+**The problem**: We keep solving the SAME substrings over and over!
+
+For example, we might solve "aaaa" dozens of times!
+
+**Time Complexity**: O(2^n) where n is the length of string
+- At each position, we might try multiple words
+- This creates an exponential tree of possibilities
+
+**This is TOO SLOW for large inputs!**
+
+### 9.4.4 Approach 2: Recursion with Memoization (Top-Down DP)
+
+#### The Breakthrough Realization
+
+**Key insight**: "I'm solving 'aaaa' many times. What if I REMEMBER the answer?"
+
+This is called **memoization** (storing results to avoid recalculation).
+
+#### Adding a Memory Cache
+
+```python
+def wordBreak_memo(s, wordDict):
+    memo = {}  # Dictionary to store results
+    
+    def helper(start_index):
+        # If we've reached the end, success!
+        if start_index == len(s):
+            return True
+        
+        # Check if we've already solved this
+        if start_index in memo:
+            return memo[start_index]
+        
+        # Try each word
+        for word in wordDict:
+            end_index = start_index + len(word)
+            
+            # Check if word matches at this position
+            if s[start_index:end_index] == word:
+                # Recursively check remainder
+                if helper(end_index):
+                    memo[start_index] = True
+                    return True
+        
+        # No word worked
+        memo[start_index] = False
+        return False
+    
+    return helper(0)
+```
+
+#### Understanding the New Concepts
+
+**What is `start_index`?**
+- Instead of passing substrings (which creates new strings in memory)
+- We pass an index showing WHERE we are in the original string
+- `start_index = 3` means "start checking from position 3 onwards"
+
+**Why use an index instead of substring?**
+```python
+# Creating substrings (slower, uses more memory):
+remaining = "leetcode"[4:]  # Creates new string "code"
+
+# Using index (faster):
+start_index = 4  # Just a number, no new string created
+```
+
+**What is the `memo` dictionary?**
+```python
+memo = {
+    0: True,   # Starting from index 0, can we break the string? Yes!
+    4: True,   # Starting from index 4, can we break the string? Yes!
+    8: True    # Starting from index 8 (end), can we break? Yes!
+}
+```
+
+#### Detailed Code Walkthrough
+
+Let me trace through with extreme detail:
+
+```
+s = "leetcode"
+wordDict = ["leet", "code"]
+memo = {}
+
+Call: helper(0)  ← Start at index 0 (beginning of string)
+
+Step 1: start_index = 0
+  - Is 0 == len("leetcode")? Is 0 == 8? NO
+  - Is 0 in memo? NO (memo is empty {})
+  - Try word "leet":
+    - end_index = 0 + 4 = 4
+    - s[0:4] = "leet"
+    - Does "leet" == "leet"? YES!
+    - Recursive call: helper(4)
+    
+    Step 2: start_index = 4
+      - Is 4 == 8? NO
+      - Is 4 in memo? NO
+      - Try word "leet":
+        - end_index = 4 + 4 = 8
+        - s[4:8] = "code"
+        - Does "code" == "leet"? NO
+      - Try word "code":
+        - end_index = 4 + 4 = 8
+        - s[4:8] = "code"
+        - Does "code" == "code"? YES!
+        - Recursive call: helper(8)
+        
+        Step 3: start_index = 8
+          - Is 8 == 8? YES!
+          - Return TRUE (base case)
+        
+      - helper(8) returned TRUE
+      - memo[4] = True
+      - Return TRUE
+    
+  - helper(4) returned TRUE
+  - memo[0] = True
+  - Return TRUE
+
+Final answer: TRUE ✓
+memo = {0: True, 4: True}
+```
+
+#### What if we call it again?
+
+```
+If we need to check starting from index 4 again:
+  - Is 4 in memo? YES! memo[4] = True
+  - Return True immediately (no recursion needed!)
+```
+
+**This is the power of memoization!**
+
+**Time Complexity**: O(n × m × k) where:
+- n = length of string
+- m = number of words in dictionary
+- k = average word length
+
+Much better than O(2^n)!
+
+### 9.4.5 Approach 3: Bottom-Up DP (The Best Interview Solution) ⭐
+
+#### Why Think Bottom-Up?
+
+Recursion can be hard to visualize. Let me think about this differently:
+
+**Question**: "Can I break the string up to position i?"
+
+**Thought process**:
+- Position 0: Empty string, always valid ✓
+- Position 1: Can I break the first 1 character?
+- Position 2: Can I break the first 2 characters?
+- ...
+- Position n: Can I break the entire string?
+
+**Building from small to large!**
+
+#### The Core Insight
+
+If I can break the string up to position `i`, and there's a word from position `i` to position `j`, then I can break up to position `j`!
+
+**Visual Example**:
+```
+s = "leetcode"
+wordDict = ["leet", "code"]
+
+Position:  0    1    2    3    4    5    6    7    8
+String:    ""   l    e    e    t    c    o    d    e
+Can break? ✓    ?    ?    ?    ?    ?    ?    ?    ?
+
+Let's fill this in:
+- Position 0: Empty, valid ✓
+- Can we reach position 4?
+  - Is there a word from 0 to 4? YES! "leet"
+  - Position 4: ✓
+- Can we reach position 8?
+  - Is there a word from 4 to 8? YES! "code"
+  - Position 8: ✓
+```
+
+#### The DP Array Explained
+
+```python
+dp[i] = True/False
+```
+
+**What does dp[i] mean?**
+- `dp[i] = True` means: "I CAN break the substring s[0:i]"
+- `dp[i] = False` means: "I CANNOT break the substring s[0:i]"
+
+**Important**: `dp[i]` represents the substring from START to position `i` (not including i)
+
+#### The Complete Bottom-Up Solution
+
+```python
+def wordBreak(s, wordDict):
+    # Convert list to set for O(1) lookup
+    word_set = set(wordDict)
+    
+    # dp[i] = True if s[0:i] can be broken
+    dp = [False] * (len(s) + 1)
+    
+    # Base case: empty string can be broken
+    dp[0] = True
+    
+    # Check every position in string
+    for i in range(1, len(s) + 1):
+        # Check every possible starting position before i
+        for j in range(i):
+            # Can we reach j? AND is there a word from j to i?
+            if dp[j] and s[j:i] in word_set:
+                dp[i] = True
+                break  # Found one way, that's enough!
+    
+    return dp[len(s)]
+```
+
+#### Understanding EVERY Line with Extreme Detail
+
+**Line 2: `word_set = set(wordDict)`**
+
+Why do we convert to a set?
+
+```python
+# List lookup is O(n):
+if "code" in ["leet", "code", "apple", "pen"]:  # Checks each item
+    # Might check: "leet"? No. "code"? Yes! (2 checks)
+
+# Set lookup is O(1):
+if "code" in {"leet", "code", "apple", "pen"}:  # Hash table magic!
+    # Single lookup! Much faster!
+```
+
+For a dictionary with 1000 words:
+- List: might check up to 1000 items
+- Set: always 1 check (on average)
+
+**Line 5: `dp = [False] * (len(s) + 1)`**
+
+Why `len(s) + 1`? Let me explain with an example:
+
+```
+s = "leet" (length 4)
+We need positions: 0, 1, 2, 3, 4
+
+Position 0 = empty string ""
+Position 1 = "l"
+Position 2 = "le"
+Position 3 = "lee"
+Position 4 = "leet"
+
+That's 5 positions total = length + 1!
+```
+
+**Line 8: `dp[0] = True`**
+
+Why is dp[0] True?
+
+```
+dp[0] represents: Can we break s[0:0]?
+s[0:0] is the empty string ""
+
+Empty string needs zero words = always valid!
+
+Think of it like: "If I have broken nothing, I'm successful!"
+```
+
+**Line 11: `for i in range(1, len(s) + 1):`**
+
+We're checking every position from 1 to end of string.
+
+```
+For s = "leet":
+i = 1 → Check if we can break "l"
+i = 2 → Check if we can break "le"
+i = 3 → Check if we can break "lee"
+i = 4 → Check if we can break "leet"
+```
+
+**Line 13: `for j in range(i):`**
+
+For each position i, we try EVERY possible split point before it!
+
+```
+When i = 4 (checking "leet"):
+j = 0 → Check: Can we split at 0? (nothing + "leet")
+j = 1 → Check: Can we split at 1? ("l" + "eet")
+j = 2 → Check: Can we split at 2? ("le" + "et")
+j = 3 → Check: Can we split at 3? ("lee" + "t")
+```
+
+**Line 15: `if dp[j] and s[j:i] in word_set:`**
+
+This is the HEART of the algorithm! Let me break it into parts:
+
+```python
+dp[j]  # Can we successfully break everything up to position j?
+and
+s[j:i] in word_set  # Is the substring from j to i a valid word?
+```
+
+**If BOTH are true**: We can reach position `i`!
+
+Let me visualize:
+```
+s = "leetcode"
+i = 4, j = 0
+
+dp[0] = True? YES (empty string is valid)
+s[0:4] in word_set? Is "leet" in {"leet", "code"}? YES!
+
+Therefore: dp[4] = True
+```
+
+**Line 16: `dp[i] = True`**
+
+We found ONE way to break up to position i. That's enough!
+
+**Line 17: `break`**
+
+Important optimization! Once we find ONE way to reach position i, we don't need to check other splits. We just need to know it's POSSIBLE, not find all ways.
+
+```
+Without break:
+  Wastes time checking other splits
+
+With break:
+  As soon as we find one way, move to next position
+```
+
+**Line 19: `return dp[len(s)]`**
+
+Return whether we can break the ENTIRE string.
+
+```
+For s = "leetcode" (length 8):
+  return dp[8]
+  
+This tells us: Can we break s[0:8]? (the whole string)
+```
+
+### 9.4.6 Ultimate Detailed Walkthrough
+
+Let me trace through EVERY single step for complete understanding:
+
+```
+s = "leetcode"
+wordDict = ["leet", "code"]
+word_set = {"leet", "code"}
+
+Initial:
+dp = [False, False, False, False, False, False, False, False, False]
+      0      1      2      3      4      5      6      7      8
+
+dp[0] = True (base case)
+dp = [True, False, False, False, False, False, False, False, False]
+      0     1      2      3      4      5      6      7      8
+
+=== i = 1 (checking if we can break "l") ===
+
+j = 0:
+  dp[0]? YES (True)
+  s[0:1] in word_set? Is "l" in {"leet", "code"}? NO
+  → Continue to next j
+  
+No valid split found.
+dp = [True, False, False, False, False, False, False, False, False]
+
+=== i = 2 (checking if we can break "le") ===
+
+j = 0:
+  dp[0]? YES
+  s[0:2] in word_set? Is "le" in {"leet", "code"}? NO
+
+j = 1:
+  dp[1]? NO (False)
+  Skip this j (if first condition fails, don't check second)
+
+No valid split found.
+dp = [True, False, False, False, False, False, False, False, False]
+
+=== i = 3 (checking if we can break "lee") ===
+
+j = 0:
+  dp[0]? YES
+  s[0:3] in word_set? Is "lee" in {"leet", "code"}? NO
+
+j = 1:
+  dp[1]? NO → Skip
+
+j = 2:
+  dp[2]? NO → Skip
+
+No valid split found.
+dp = [True, False, False, False, False, False, False, False, False]
+
+=== i = 4 (checking if we can break "leet") ===
+
+j = 0:
+  dp[0]? YES
+  s[0:4] in word_set? Is "leet" in {"leet", "code"}? YES! ✓
+  
+  dp[4] = True
+  break (found one way!)
+
+dp = [True, False, False, False, True, False, False, False, False]
+      0     1      2      3      4     5      6      7      8
+
+=== i = 5 (checking if we can break "leetc") ===
+
+j = 0:
+  dp[0]? YES
+  s[0:5] in word_set? Is "leetc" in {"leet", "code"}? NO
+
+j = 1:
+  dp[1]? NO → Skip
+
+j = 2:
+  dp[2]? NO → Skip
+
+j = 3:
+  dp[3]? NO → Skip
+
+j = 4:
+  dp[4]? YES
+  s[4:5] in word_set? Is "c" in {"leet", "code"}? NO
+
+No valid split found.
+dp = [True, False, False, False, True, False, False, False, False]
+
+=== i = 6 (checking if we can break "leetco") ===
+
+j = 0:
+  dp[0]? YES
+  s[0:6] in word_set? Is "leetco" in {"leet", "code"}? NO
+
+j = 1, 2, 3: dp[j] is False → Skip
+
+j = 4:
+  dp[4]? YES
+  s[4:6] in word_set? Is "co" in {"leet", "code"}? NO
+
+j = 5:
+  dp[5]? NO → Skip
+
+No valid split found.
+dp = [True, False, False, False, True, False, False, False, False]
+
+=== i = 7 (checking if we can break "leetcod") ===
+
+j = 0:
+  dp[0]? YES
+  s[0:7] in word_set? Is "leetcod" in {"leet", "code"}? NO
+
+j = 1, 2, 3: Skip (dp[j] is False)
+
+j = 4:
+  dp[4]? YES
+  s[4:7] in word_set? Is "cod" in {"leet", "code"}? NO
+
+j = 5, 6: Skip
+
+No valid split found.
+dp = [True, False, False, False, True, False, False, False, False]
+
+=== i = 8 (checking if we can break "leetcode") ===
+
+j = 0:
+  dp[0]? YES
+  s[0:8] in word_set? Is "leetcode" in {"leet", "code"}? NO
+
+j = 1, 2, 3: Skip
+
+j = 4:
+  dp[4]? YES (we can break "leet"!)
+  s[4:8] in word_set? Is "code" in {"leet", "code"}? YES! ✓
+  
+  dp[8] = True
+  break
+
+dp = [True, False, False, False, True, False, False, False, True]
+      0     1      2      3      4     5      6      7      8
+
+Return dp[8] = True ✓
+```
+
+#### Visual Representation of the Solution
+
+```
+String:    l    e    e    t    c    o    d    e
+Position:  0    1    2    3    4    5    6    7    8
+dp:        T    F    F    F    T    F    F    F    T
+
+           ↑                   ↑                   ↑
+           |                   |                   |
+        Empty              "leet"            "leetcode"
+        (base)            (valid!)           (valid!)
+
+The two TRUE values (positions 4 and 8) show us the breakpoints:
+- Position 0 to 4: "leet" ✓
+- Position 4 to 8: "code" ✓
+- Full string: valid!
+```
+
+### 9.4.7 Common Mistakes and How to Avoid Them
+
+#### Mistake 1: Forgetting dp[0] = True
+
+```python
+# WRONG:
+dp = [False] * (len(s) + 1)
+# Missing: dp[0] = True
+
+Why this fails:
+  When j = 0, dp[0] is False
+  So dp[0] and s[0:i] in word_set will ALWAYS be False
+  Nothing will ever be set to True!
+```
+
+#### Mistake 2: Using Wrong Indices
+
+```python
+# WRONG:
+for i in range(len(s)):  # Missing + 1
+    for j in range(i + 1):  # Wrong range
+```
+
+Remember:
+- `i` goes from 1 to len(s) + 1 (to include full string)
+- `j` goes from 0 to i (not including i)
+
+#### Mistake 3: Not Converting to Set
+
+```python
+# SLOW:
+for word in wordDict:
+    if s[j:i] == word:  # O(m) lookup where m = number of words
+
+# FAST:
+if s[j:i] in word_set:  # O(1) lookup
+```
+
+For large dictionaries, this makes a HUGE difference!
+
+### 9.4.8 Complexity Analysis
+
+**Time Complexity: O(n² × k)** where:
+- n = length of string s
+- k = length of longest word in dictionary
+
+Why?
+- Outer loop: O(n) - iterate through positions
+- Inner loop: O(n) - check all split points
+- String slicing s[j:i]: O(k) - creates substring
+- Set lookup: O(k) - compares strings
+
+Total: O(n × n × k) = O(n²k)
+
+**Space Complexity: O(n + m × k)** where:
+- n for dp array: O(n)
+- m words each of length k in set: O(m × k)
+
+Total: O(n + mk)
+
+### 9.4.9 When to Use This Pattern
+
+Word Break teaches us a pattern useful for many problems:
+
+**Use this DP pattern when**:
+1. You need to break/split a string or array
+2. You're checking "can I do X with the entire thing?"
+3. If you can do X up to position i, and condition Y is met, you can do X up to position j
+
+Similar problems:
+- Palindrome Partitioning
+- Decode Ways
+- Perfect Squares
