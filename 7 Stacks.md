@@ -1239,3 +1239,634 @@ Stack: [3]
 Token: "3"
 Is it operator? No
 Push to stack
+
+Stack: [3, 3]
+
+Token: "*"
+Is it operator? Yes!
+Pop two numbers: right=3, left=3
+Calculate: 3 * 3 = 9
+Push result back
+Stack: [9]
+
+No more tokens
+Return top of stack: 9
+```
+
+#### Order of Operands Matters!
+
+**Critical:** For subtraction and division, ORDER MATTERS!
+
+```
+Example: ["4", "2", "-"]
+
+WRONG:
+right = 4, left = 2
+result = right - left = 4 - 2 = 2 ❌
+
+RIGHT:
+right = 2, left = 4
+result = left - right = 4 - 2 = 2 ✓
+
+Why?
+In RPN "4 2 -" means "4 minus 2"
+But when we pop:
+- First pop gets 2 (was on top)
+- Second pop gets 4 (was below)
+
+So: left=4, right=2, compute left-right
+```
+
+**Visual:**
+```
+Stack: [4, 2]
+        ↑  ↑
+      left right
+
+Pop right (2) first
+Pop left (4) second
+Compute: left - right = 4 - 2 ✓
+```
+
+#### Solution
+
+```python
+def evalRPN(tokens: list[str]) -> int:
+    stack = []
+    operators = {'+', '-', '*', '/'}
+    
+    for token in tokens:
+        if token not in operators:
+            # It's a number, push to stack
+            stack.append(int(token))
+        else:
+            # It's an operator
+            # Pop two operands (order matters!)
+            right = stack.pop()
+            left = stack.pop()
+            
+            # Apply operator
+            if token == '+':
+                result = left + right
+            elif token == '-':
+                result = left - right
+            elif token == '*':
+                result = left * right
+            elif token == '/':
+                # Integer division truncates toward zero
+                result = int(left / right)
+            
+            # Push result back
+            stack.append(result)
+    
+    # Final answer is only element in stack
+    return stack[-1]
+```
+
+#### Understanding Division
+
+**Why `int(left / right)` instead of `left // right`?**
+
+Python's `//` operator floors toward negative infinity, but the problem wants truncation toward zero!
+
+```python
+# Example: -3 / 2
+
+Using //:
+-3 // 2 = -2  (floors down)
+
+Using int(/) :
+int(-3 / 2) = int(-1.5) = -1  (truncates toward zero)
+
+Problem requires: -1 ✓
+```
+
+**More examples:**
+```python
+7 // 2 = 3
+int(7 / 2) = 3
+Both same for positive ✓
+
+-7 // 2 = -4 (floors down)
+int(-7 / 2) = -3 (truncates toward 0) ✓ What we want!
+```
+
+#### Detailed Walkthrough
+
+**Example: `["4","13","5","/","+"]`**
+
+```
+Expression means: 4 + (13 / 5)
+
+Token: "4"
+Stack: [4]
+
+Token: "13"
+Stack: [4, 13]
+
+Token: "5"
+Stack: [4, 13, 5]
+
+Token: "/"
+right = 5, left = 13
+13 / 5 = 2 (integer division)
+Stack: [4, 2]
+
+Token: "+"
+right = 2, left = 4
+4 + 2 = 6
+Stack: [6]
+
+Return 6 ✓
+```
+
+#### Complex Example with Multiple Operators
+
+**Example: `["10","6","9","3","+","-11","*","/","*","17","+","5","+"]`**
+
+This looks scary, but let's break it down:
+
+```
+Token: "10"    Stack: [10]
+Token: "6"     Stack: [10, 6]
+Token: "9"     Stack: [10, 6, 9]
+Token: "3"     Stack: [10, 6, 9, 3]
+
+Token: "+"     9 + 3 = 12
+               Stack: [10, 6, 12]
+
+Token: "-11"   Stack: [10, 6, 12, -11]
+
+Token: "*"     12 * (-11) = -132
+               Stack: [10, 6, -132]
+
+Token: "/"     6 / (-132) = 0 (integer division)
+               Stack: [10, 0]
+
+Token: "*"     10 * 0 = 0
+               Stack: [0]
+
+Token: "17"    Stack: [0, 17]
+
+Token: "+"     0 + 17 = 17
+               Stack: [17]
+
+Token: "5"     Stack: [17, 5]
+
+Token: "+"     17 + 5 = 22
+               Stack: [22]
+
+Return 22
+```
+
+**What this means in normal notation:**
+```
+((10 * (6 / ((9 + 3) * -11))) + 17) + 5 = 22
+```
+
+See why RPN is simpler? No parentheses needed!
+
+#### Common Mistakes
+
+**Mistake 1: Wrong operand order**
+```python
+# WRONG
+right = stack.pop()
+left = stack.pop()
+result = right - left  # Backwards!
+
+# RIGHT
+right = stack.pop()
+left = stack.pop()
+result = left - right  # Correct order
+```
+
+**Mistake 2: Using // instead of int(/)**
+```python
+# WRONG for negative numbers
+result = left // right  # Floors toward -∞
+
+# RIGHT
+result = int(left / right)  # Truncates toward 0
+```
+
+**Mistake 3: Not converting strings to int**
+```python
+# WRONG
+stack.append(token)  # Stores string!
+
+# RIGHT
+stack.append(int(token))  # Stores integer
+```
+
+**Mistake 4: Checking operators incorrectly**
+```python
+# LESS EFFICIENT
+if token == '+' or token == '-' or token == '*' or token == '/':
+    ...
+
+# BETTER
+operators = {'+', '-', '*', '/'}
+if token in operators:  # O(1) lookup in set
+    ...
+```
+
+#### Time & Space Complexity
+
+**Time Complexity: O(n)**
+- Process each token once
+- Each operation (push/pop/arithmetic) is O(1)
+- n tokens → O(n) time
+
+**Space Complexity: O(n)**
+- Worst case: all numbers before any operators
+- Example: `["1","2","3","4","5","+","+","+","+"]`
+- Stack grows to [1,2,3,4,5] → O(n)
+
+---
+
+### Problem 4: Daily Temperatures
+
+**[LeetCode 739 - Daily Temperatures](https://leetcode.com/problems/daily-temperatures/)**
+
+#### Problem Statement
+
+Given an array of integers `temperatures` represents the daily temperatures, return an array `answer` such that `answer[i]` is the number of days you have to wait after the `ith` day to get a warmer temperature. If there is no future day with a warmer temperature, keep `answer[i] == 0`.
+
+**Example 1:**
+```
+Input: temperatures = [73,74,75,71,69,72,76,73]
+Output:               [ 1, 1, 4, 2, 1, 1, 0, 0]
+
+Explanation:
+Day 0 (73°): Next warmer is day 1 (74°) → wait 1 day
+Day 1 (74°): Next warmer is day 2 (75°) → wait 1 day
+Day 2 (75°): Next warmer is day 6 (76°) → wait 4 days
+Day 3 (71°): Next warmer is day 5 (72°) → wait 2 days
+Day 4 (69°): Next warmer is day 5 (72°) → wait 1 day
+Day 5 (72°): Next warmer is day 6 (76°) → wait 1 day
+Day 6 (76°): No warmer day → wait 0 days
+Day 7 (73°): No warmer day → wait 0 days
+```
+
+**Example 2:**
+```
+Input: temperatures = [30,40,50,60]
+Output:               [ 1, 1, 1, 0]
+```
+
+**Example 3:**
+```
+Input: temperatures = [30,60,90]
+Output:               [ 1, 1, 0]
+```
+
+#### Understanding the Problem
+
+**What we're looking for:**
+
+For each day, find the NEXT day that's warmer than current day.
+
+```
+[73, 74, 75, 71, 69, 72, 76, 73]
+ ↑
+Day 0: 73°
+
+Looking forward:
+Day 1: 74° → Warmer! ✓
+Answer for day 0: 1 - 0 = 1 day wait
+```
+
+**Another example:**
+```
+[73, 74, 75, 71, 69, 72, 76, 73]
+         ↑
+Day 2: 75°
+
+Looking forward:
+Day 3: 71° → Colder ✗
+Day 4: 69° → Colder ✗
+Day 5: 72° → Colder ✗
+Day 6: 76° → Warmer! ✓
+Answer for day 2: 6 - 2 = 4 days wait
+```
+
+#### Naive Approach (SLOW)
+
+**Brute force:** For each day, scan forward until we find warmer day.
+
+```python
+def dailyTemperatures(temperatures):
+    n = len(temperatures)
+    answer = [0] * n
+    
+    for i in range(n):
+        for j in range(i + 1, n):
+            if temperatures[j] > temperatures[i]:
+                answer[i] = j - i
+                break
+    
+    return answer
+```
+
+**Why this is slow:**
+```
+For each day i:
+- Check all days after it: j = i+1 to n-1
+- Worst case: n checks per day
+- n days total
+- Time complexity: O(n²)
+
+For n = 10,000 temperatures:
+- 100,000,000 operations! Too slow!
+```
+
+**Example showing worst case:**
+```
+temperatures = [100, 99, 98, 97, 96, ..., 1]
+Decreasing order!
+
+Day 0 (100°): Check 99, 98, 97... all → 0
+Day 1 (99°):  Check 98, 97, 96... all → 0
+...
+Every day checks all remaining days → O(n²)
+```
+
+#### Optimal Approach: Monotonic Stack
+
+**Key insight:** Use a stack to remember "unsolved" days!
+
+**What's a monotonic stack?**
+A stack that maintains elements in a specific order (increasing or decreasing).
+
+**For this problem:**
+- Stack stores indices of days
+- Temperatures at these indices are in DECREASING order
+- When we find a warmer day, we can solve multiple previous days!
+
+#### How Monotonic Stack Works
+
+**Core idea:**
+```
+Stack keeps days waiting for warmer temperature
+When current day is warmer:
+- Pop all colder days from stack
+- They've all found their answer!
+```
+
+**Visual:**
+```
+temperatures = [73, 74, 75, 71, 69, 72, 76, 73]
+
+Stack stores indices where temps are decreasing:
+[73°, 71°, 69°, ...]  Waiting for warmer day
+      ↑
+   Decreasing!
+
+When we see 72°:
+- 69° < 72° → Solved!
+- 71° < 72° → Solved!
+- 73° > 72° → Still waiting
+
+Stack helps solve multiple days at once!
+```
+
+#### Detailed Walkthrough
+
+**Example: `[73, 74, 75, 71, 69, 72, 76, 73]`**
+
+```
+Initial:
+answer = [0, 0, 0, 0, 0, 0, 0, 0]
+stack = []
+
+
+Day 0: temp = 73°, index = 0
+Stack empty, push index 0
+stack = [0]
+        (73°)
+
+
+Day 1: temp = 74°, index = 1
+Stack top (index 0) = 73°
+74° > 73° → Found warmer!
+
+Pop index 0:
+answer[0] = 1 - 0 = 1
+
+Push index 1:
+stack = [1]
+        (74°)
+answer = [1, 0, 0, 0, 0, 0, 0, 0]
+
+
+Day 2: temp = 75°, index = 2
+Stack top (index 1) = 74°
+75° > 74° → Found warmer!
+
+Pop index 1:
+answer[1] = 2 - 1 = 1
+
+Push index 2:
+stack = [2]
+        (75°)
+answer = [1, 1, 0, 0, 0, 0, 0, 0]
+
+
+Day 3: temp = 71°, index = 3
+Stack top (index 2) = 75°
+71° < 75° → Not warmer, can't solve yet
+
+Push index 3:
+stack = [2, 3]
+        (75°,71°)
+answer = [1, 1, 0, 0, 0, 0, 0, 0]
+
+
+Day 4: temp = 69°, index = 4
+Stack top (index 3) = 71°
+69° < 71° → Not warmer
+
+Push index 4:
+stack = [2, 3, 4]
+        (75°,71°,69°)
+answer = [1, 1, 0, 0, 0, 0, 0, 0]
+
+
+Day 5: temp = 72°, index = 5
+Stack top (index 4) = 69°
+72° > 69° → Found warmer!
+
+Pop index 4:
+answer[4] = 5 - 4 = 1
+
+Stack top now (index 3) = 71°
+72° > 71° → Found warmer!
+
+Pop index 3:
+answer[3] = 5 - 3 = 2
+
+Stack top now (index 2) = 75°
+72° < 75° → Not warmer, stop popping
+
+Push index 5:
+stack = [2, 5]
+        (75°,72°)
+answer = [1, 1, 0, 2, 1, 0, 0, 0]
+
+
+Day 6: temp = 76°, index = 6
+Stack top (index 5) = 72°
+76° > 72° → Found warmer!
+
+Pop index 5:
+answer[5] = 6 - 5 = 1
+
+Stack top (index 2) = 75°
+76° > 75° → Found warmer!
+
+Pop index 2:
+answer[2] = 6 - 2 = 4
+
+Stack empty, push index 6:
+stack = [6]
+        (76°)
+answer = [1, 1, 4, 2, 1, 1, 0, 0]
+
+
+Day 7: temp = 73°, index = 7
+Stack top (index 6) = 76°
+73° < 76° → Not warmer
+
+Push index 7:
+stack = [6, 7]
+        (76°,73°)
+answer = [1, 1, 4, 2, 1, 1, 0, 0]
+
+
+End:
+Remaining indices in stack never found warmer day
+They already have 0 in answer array
+Final: [1, 1, 4, 2, 1, 1, 0, 0] ✓
+```
+
+#### Why This Works
+
+**Key properties:**
+
+1. **Stack maintains decreasing temperatures**
+```
+Valid stack states:
+[75°, 71°, 69°]  ✓ Decreasing
+[76°, 74°]       ✓ Decreasing
+[80°]            ✓ Single element
+
+Invalid:
+[70°, 75°]       ✗ Increasing!
+When we see 75°, we would have popped 70° already
+```
+
+2. **When current temp is warmer, solve multiple days**
+```
+Stack: [75°, 71°, 69°]
+Current: 72°
+
+72° > 69° → Pop, solve day for 69°
+72° > 71° → Pop, solve day for 71°
+72° < 75° → Stop, can't solve 75° yet
+```
+
+3. **Each index pushed and popped at most once**
+```
+Push once when we reach that day
+Pop once when we find warmer day
+→ O(n) total operations!
+```
+
+#### Solution
+
+```python
+def dailyTemperatures(temperatures: list[int]) -> list[int]:
+    n = len(temperatures)
+    answer = [0] * n
+    stack = []  # Store indices
+    
+    for i in range(n):
+        # While current temp is warmer than stack top
+        while stack and temperatures[i] > temperatures[stack[-1]]:
+            # Pop and solve that day
+            prev_index = stack.pop()
+            answer[prev_index] = i - prev_index
+        
+        # Push current index
+        stack.append(i)
+    
+    # Remaining indices in stack never found warmer day
+    # They already have 0 in answer array
+    return answer
+```
+
+#### Why Store Indices, Not Temperatures?
+
+**Question:** Why not store temperatures directly?
+
+```python
+# BAD: Store temperatures
+stack = [73, 74, 75]  
+# Problem: How do we calculate days to wait?
+# We don't know which day 73° was!
+
+# GOOD: Store indices
+stack = [0, 1, 2]
+# Can calculate: current_index - stack_index
+# Can also get temperature: temperatures[stack[-1]]
+```
+
+#### Common Mistakes
+
+**Mistake 1: Storing temperatures instead of indices**
+```python
+# WRONG
+stack.append(temperatures[i])  # Can't calculate difference!
+
+# RIGHT
+stack.append(i)  # Can calculate i - prev_index
+```
+
+**Mistake 2: Not using while loop**
+```python
+# WRONG
+if stack and temperatures[i] > temperatures[stack[-1]]:
+    prev_index = stack.pop()  # Only pops one!
+    answer[prev_index] = i - prev_index
+
+# RIGHT
+while stack and temperatures[i] > temperatures[stack[-1]]:
+    # Keep popping all smaller temperatures
+```
+
+**Mistake 3: Forgetting to push current index**
+```python
+# WRONG
+while stack and temperatures[i] > temperatures[stack[-1]]:
+    prev_index = stack.pop()
+    answer[prev_index] = i - prev_index
+# Forgot to push i!
+
+# RIGHT
+while stack and ...:
+    ...
+stack.append(i)  # Must push current index!
+```
+
+#### Time & Space Complexity
+
+**Time Complexity: O(n)**
+- Each index pushed once
+- Each index popped at most once
+- Total: 2n operations = O(n)
+
+**Space Complexity: O(n)**
+- Worst case: all temperatures decreasing
+- Stack contains all indices
+- Example: [100, 99, 98, ..., 1]
