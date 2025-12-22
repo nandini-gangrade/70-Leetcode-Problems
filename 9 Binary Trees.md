@@ -3599,4 +3599,2425 @@ def hasPathSum(root: TreeNode, targetSum: int) -> bool:
 
 **Concise version:**
 ```python
-def hasPathSum(root: TreeNode, targetSum: int) -> bool
+def hasPathSum(root: TreeNode, targetSum: int) -> bool:
+    if not root:
+        return False
+    
+    if not root.left and not root.right:
+        return root.val == targetSum
+    
+    return (hasPathSum(root.left, targetSum - root.val) or
+            hasPathSum(root.right, targetSum - root.val))
+```
+
+#### Detailed Trace
+
+```python
+Tree:
+      1
+     / \
+    2   3
+
+Target: 3
+
+Call tree:
+
+hasPathSum(1, 3)
+│ root=1, not leaf
+│ remaining = 3 - 1 = 2
+│
+├─ hasPathSum(2, 2)
+│  │ root=2, IS LEAF
+│  │ 2 == 2? Yes! ✓
+│  │
+│  Return True
+│
+(Right subtree not evaluated - OR short-circuits)
+
+Return True ✓
+
+
+Another example:
+
+Tree:
+      1
+     / \
+    2   3
+
+Target: 5
+
+Call tree:
+
+hasPathSum(1, 5)
+│ root=1, not leaf
+│ remaining = 5 - 1 = 4
+│
+├─ hasPathSum(2, 4)
+│  │ root=2, IS LEAF
+│  │ 2 == 4? No
+│  │
+│  Return False
+│
+└─ hasPathSum(3, 4)
+   │ root=3, IS LEAF
+   │ 3 == 4? No
+   │
+   Return False
+
+Return False ✗
+```
+
+#### Why OR instead of AND?
+
+**Critical understanding:**
+
+```python
+return hasPathSum(left, remaining) or hasPathSum(right, remaining)
+```
+
+**Why OR?**
+- We need **at least ONE** path to work
+- If left path works → return True
+- If right path works → return True
+- Both fail → return False
+
+**Why not AND?**
+```python
+# WRONG
+return hasPathSum(left, remaining) and hasPathSum(right, remaining)
+
+# This requires BOTH paths to sum to target!
+# But we only need ONE path!
+
+Example:
+      5
+     / \
+    4   8
+
+Target: 9
+
+Left path: 5→4 = 9 ✓
+Right path: 5→8 = 13 ✗
+
+OR: True (one path works) ✓
+AND: False (both don't work) ✗
+```
+
+#### Alternative: Iterative Solution
+
+**Using stack with (node, running_sum):**
+
+```python
+def hasPathSum_iterative(root: TreeNode, targetSum: int) -> bool:
+    """
+    Iterative DFS using stack
+    """
+    if not root:
+        return False
+    
+    stack = [(root, root.val)]
+    
+    while stack:
+        node, current_sum = stack.pop()
+        
+        # Check if leaf
+        if not node.left and not node.right:
+            if current_sum == targetSum:
+                return True
+        
+        # Add children with updated sum
+        if node.left:
+            stack.append((node.left, current_sum + node.left.val))
+        if node.right:
+            stack.append((node.right, current_sum + node.right.val))
+    
+    return False
+```
+
+**Trace:**
+```python
+Tree:
+      5
+     / \
+    4   8
+   /
+  11
+
+Target: 20
+
+Initial:
+stack = [(5, 5)]
+
+Iteration 1:
+Pop (5, 5)
+Not leaf
+Add (4, 9), (8, 13)
+stack = [(4, 9), (8, 13)]
+
+Iteration 2:
+Pop (8, 13)
+Not leaf (actually is in this tree, let's adjust)
+
+Let me fix:
+
+Tree:
+      5
+     / \
+    4   8
+
+Target: 13
+
+Initial:
+stack = [(5, 5)]
+
+Iteration 1:
+Pop (5, 5)
+Not leaf
+Add (4, 9), (8, 13)
+stack = [(4, 9), (8, 13)]
+
+Iteration 2:
+Pop (8, 13)
+IS LEAF
+13 == 13? Yes! ✓
+Return True
+```
+
+#### Edge Cases
+
+**Edge Case 1: Empty tree**
+```python
+root = None, targetSum = 0
+Output: False
+(No path exists)
+```
+
+**Edge Case 2: Single node matching**
+```python
+root = [1], targetSum = 1
+Output: True
+(Node 1 is a leaf, 1 == 1)
+```
+
+**Edge Case 3: Single node not matching**
+```python
+root = [1], targetSum = 2
+Output: False
+```
+
+**Edge Case 4: Path to non-leaf**
+```python
+root = [1,2], targetSum = 1
+
+Tree:
+    1
+   /
+  2
+
+Path 1 alone sums to 1
+But node 1 is NOT a leaf!
+Output: False
+```
+
+**Edge Case 5: Negative values**
+```python
+root = [1,-2,3], targetSum = 2
+
+Tree:
+    1
+   / \
+ -2   3
+
+Path 1→3 = 4
+Path 1→-2 = -1
+Output: False
+```
+
+#### Common Mistakes
+
+**Mistake 1: Not checking if leaf**
+```python
+# WRONG
+def hasPathSum(root, targetSum):
+    if not root:
+        return False
+    
+    if root.val == targetSum:
+        return True  # Wrong! Might not be leaf!
+    
+    return hasPathSum(root.left, targetSum - root.val) or \
+           hasPathSum(root.right, targetSum - root.val)
+
+# RIGHT
+if not root.left and not root.right:  # Check if leaf!
+    return root.val == targetSum
+```
+
+**Mistake 2: Using AND instead of OR**
+```python
+# WRONG
+return hasPathSum(left, remaining) and hasPathSum(right, remaining)
+# Need BOTH paths? No!
+
+# RIGHT
+return hasPathSum(left, remaining) or hasPathSum(right, remaining)
+# Need at least ONE path!
+```
+
+**Mistake 3: Not handling None children**
+```python
+# WRONG - if one child is None
+return hasPathSum(root.left, remaining) or \
+       hasPathSum(root.right, remaining)
+
+# If root.left is None:
+# hasPathSum(None, remaining) returns False ✓
+# This is correct!
+
+# If root.right is None:
+# hasPathSum(None, remaining) returns False ✓
+# This is correct!
+
+# Actually not a mistake if base case handles None!
+```
+
+#### Variation: Path Sum II
+
+**[LeetCode 113 - Path Sum II](https://leetcode.com/problems/path-sum-ii/)**
+
+**Problem:** Return ALL paths that sum to targetSum
+
+```python
+def pathSum(root: TreeNode, targetSum: int) -> list[list[int]]:
+    """
+    Find all root-to-leaf paths that sum to targetSum
+    """
+    result = []
+    
+    def dfs(node, remaining, path):
+        if not node:
+            return
+        
+        # Add current node to path
+        path.append(node.val)
+        
+        # Check if leaf and sum matches
+        if not node.left and not node.right and remaining == node.val:
+            result.append(path[:])  # Add copy!
+        
+        # Recurse
+        dfs(node.left, remaining - node.val, path)
+        dfs(node.right, remaining - node.val, path)
+        
+        # Backtrack
+        path.pop()
+    
+    dfs(root, targetSum, [])
+    return result
+```
+
+#### Time & Space Complexity
+
+**Time Complexity: O(n)**
+- Must check all nodes in worst case
+- Early termination possible
+- Best: O(log n) if path found early in balanced tree
+- Worst: O(n) if no path exists
+
+**Space Complexity: O(h)**
+- h = height of tree
+- Recursion stack depth
+- Best: O(log n) for balanced tree
+- Worst: O(n) for skewed tree
+
+---
+
+### Problem 7: Diameter of Binary Tree
+
+**[LeetCode 543 - Diameter of Binary Tree](https://leetcode.com/problems/diameter-of-binary-tree/)**
+
+#### Problem Statement
+
+Given the `root` of a binary tree, return the length of the **diameter** of the tree.
+
+The **diameter** of a binary tree is the **length of the longest path** between any two nodes in a tree. This path may or may not pass through the root.
+
+The **length of a path** between two nodes is represented by the number of edges between them.
+
+**Example 1:**
+```
+Input: root = [1,2,3,4,5]
+
+Tree:
+      1
+     / \
+    2   3
+   / \
+  4   5
+
+Output: 3
+
+Explanation: The longest path is [4,2,1,3] or [5,2,1,3]
+Length = 3 edges
+```
+
+**Example 2:**
+```
+Input: root = [1,2]
+
+Tree:
+    1
+   /
+  2
+
+Output: 1
+```
+
+#### Understanding the Problem
+
+**What is diameter?**
+- Longest path between ANY two nodes
+- Path can be anywhere in tree
+- Doesn't have to pass through root!
+
+**Critical:** Count EDGES, not NODES
+
+```
+Path with 4 nodes:
+[4] - [2] - [1] - [3]
+    ↑     ↑     ↑
+  3 edges total
+
+Length = 3
+```
+
+**Visual examples:**
+
+```
+Example 1:
+      1
+     / \
+    2   3
+   / \
+  4   5
+
+Possible paths:
+4→2→1→3 (3 edges) ← Longest!
+5→2→1→3 (3 edges) ← Also longest!
+4→2→5 (2 edges)
+2→1→3 (2 edges)
+
+Diameter = 3
+```
+
+```
+Example 2:
+      1
+     / \
+    2   3
+   /     \
+  4       5
+ /         \
+6           7
+
+Longest path: 6→4→2→1→3→5→7 (6 edges)
+Diameter = 6
+
+Note: Path DOESN'T have to go through root!
+Could be 6→4→2 (2 edges) in left subtree only
+```
+
+#### Key Insight
+
+**Diameter at any node = left height + right height**
+
+```
+At node N:
+Longest path through N = 
+  longest path going left + longest path going right
+
+      N
+     / \
+    L   R
+   
+Diameter through N = height(L) + height(R)
+```
+
+**Visual:**
+```
+      1
+     / \
+    2   3
+   / \
+  4   5
+
+At node 1:
+Left height = 2 (path: 1→2→4)
+Right height = 1 (path: 1→3)
+Diameter = 2 + 1 = 3 ✓
+
+At node 2:
+Left height = 1 (path: 2→4)
+Right height = 1 (path: 2→5)
+Diameter = 1 + 1 = 2
+```
+
+**Why check every node?**
+
+```
+Tree:
+        1
+       /
+      2
+     / \
+    3   4
+   /
+  5
+
+Diameter through root (1):
+Left height = 3, Right height = 0
+Diameter = 3 + 0 = 3
+
+Diameter through node 2:
+Left height = 2, Right height = 1
+Diameter = 2 + 1 = 3
+
+Same! But if we only checked root, we'd miss:
+
+Tree:
+        1
+       /
+      2
+     / \
+    3   4
+   /     \
+  5       6
+ /
+7
+
+Diameter through node 2:
+Left = 3, Right = 2
+Diameter = 3 + 2 = 5
+
+Diameter through root 1:
+Left = 4, Right = 0
+Diameter = 4
+
+We'd miss the diameter of 5!
+```
+
+#### Naive Approach (Inefficient)
+
+**Attempt 1: Calculate height repeatedly**
+
+```python
+def diameterOfBinaryTree(root):
+    def height(node):
+        if not node:
+            return 0
+        return 1 + max(height(node.left), height(node.right))
+    
+    def diameter(node):
+        if not node:
+            return 0
+        
+        # Diameter through this node
+        left_height = height(node.left)
+        right_height = height(node.right)
+        through_node = left_height + right_height
+        
+        # Diameter in subtrees
+        left_diameter = diameter(node.left)
+        right_diameter = diameter(node.right)
+        
+        return max(through_node, left_diameter, right_diameter)
+    
+    return diameter(root)
+```
+
+**Problem:**
+```
+Time: O(n²)
+
+For each node (n nodes):
+- Calculate height: O(n)
+- Total: O(n²)
+
+Tree:
+    1
+   / \
+  2   3
+ / \
+4   5
+
+At node 1: Calculate height(2) - visits 4, 5
+At node 2: Calculate height(4), height(5) again!
+
+Recalculating heights!
+```
+
+#### Optimal Approach: Single DFS with Global Variable
+
+**Key optimization:** Calculate height once, track diameter globally!
+
+**Algorithm:**
+1. Use DFS to calculate height
+2. At each node, calculate diameter through it
+3. Update global maximum
+4. Return height for parent
+
+**Why this works:**
+- Single traversal: O(n)
+- No recalculation
+- Track max diameter as we go
+
+#### Visual Step-by-Step
+
+```
+Tree:
+      1
+     / \
+    2   3
+   / \
+  4   5
+
+Global: diameter = 0
+
+
+DFS(4):
+  Leaf node
+  diameter_here = 0 + 0 = 0
+  diameter = max(0, 0) = 0
+  Return height = 1
+
+DFS(5):
+  Leaf node
+  diameter_here = 0 + 0 = 0
+  diameter = max(0, 0) = 0
+  Return height = 1
+
+DFS(2):
+  left_height = 1 (from node 4)
+  right_height = 1 (from node 5)
+  diameter_here = 1 + 1 = 2
+  diameter = max(0, 2) = 2 ← Updated!
+  Return height = 1 + max(1, 1) = 2
+
+DFS(3):
+  Leaf node
+  diameter_here = 0 + 0 = 0
+  diameter = max(2, 0) = 2
+  Return height = 1
+
+DFS(1):
+  left_height = 2 (from node 2)
+  right_height = 1 (from node 3)
+  diameter_here = 2 + 1 = 3
+  diameter = max(2, 3) = 3 ← Updated!
+  Return height = 1 + max(2, 1) = 3
+
+Return diameter = 3 ✓
+```
+
+#### Solution
+
+```python
+class Solution:
+    def diameterOfBinaryTree(self, root: TreeNode) -> int:
+        """
+        Find diameter using single DFS
+        
+        Time: O(n) - visit each node once
+        Space: O(h) - recursion depth
+        """
+        self.diameter = 0  # Global variable to track max
+        
+        def height(node):
+            if not node:
+                return 0
+            
+            # Get heights of subtrees
+            left_height = height(node.left)
+            right_height = height(node.right)
+            
+            # Update diameter if path through this node is longer
+            self.diameter = max(self.diameter, left_height + right_height)
+            
+            # Return height for parent
+            return 1 + max(left_height, right_height)
+        
+        height(root)
+        return self.diameter
+```
+
+**Alternative without class variable:**
+
+```python
+def diameterOfBinaryTree(root: TreeNode) -> int:
+    """
+    Using list to store diameter (mutable in closure)
+    """
+    diameter = [0]  # Use list so it's mutable in nested function
+    
+    def height(node):
+        if not node:
+            return 0
+        
+        left = height(node.left)
+        right = height(node.right)
+        
+        diameter[0] = max(diameter[0], left + right)
+        
+        return 1 + max(left, right)
+    
+    height(root)
+    return diameter[0]
+```
+
+**Why use list or class variable?**
+
+```python
+# WRONG - doesn't work
+def diameterOfBinaryTree(root):
+    diameter = 0  # Local variable
+    
+    def height(node):
+        diameter = max(diameter, left + right)  # Creates new local!
+        # Doesn't update outer diameter!
+    
+    # diameter is still 0
+
+# RIGHT - use nonlocal
+def diameterOfBinaryTree(root):
+    diameter = 0
+    
+    def height(node):
+        nonlocal diameter  # Modify outer variable
+        diameter = max(diameter, left + right)
+
+# OR use mutable object
+def diameterOfBinaryTree(root):
+    diameter = [0]  # List is mutable
+    
+    def height(node):
+        diameter[0] = max(diameter[0], left + right)  # Works!
+```
+
+#### Detailed Trace
+
+```python
+Tree:
+        1
+       / \
+      2   3
+     /
+    4
+
+diameter = 0
+
+height(1):
+│
+├─ height(2):
+│  │
+│  ├─ height(4):
+│  │  │
+│  │  ├─ height(None) → 0
+│  │  │
+│  │  └─ height(None) → 0
+│  │  │
+│  │  diameter = max(0, 0+0) = 0
+│  │  Return 1
+│  │
+│  ├─ height(None) → 0
+│  │
+│  diameter = max(0, 1+0) = 1
+│  Return 1 + max(1, 0) = 2
+│
+└─ height(3):
+   │
+   ├─ height(None) → 0
+   │
+   └─ height(None) → 0
+   │
+   diameter = max(1, 0+0) = 1
+   Return 1
+│
+diameter = max(1, 2+1) = 3
+Return 1 + max(2, 1) = 3
+
+Final diameter = 3
+```
+
+**Another example:**
+
+```python
+Tree:
+      1
+     /
+    2
+   / \
+  3   4
+
+diameter = 0
+
+height(1):
+│
+├─ height(2):
+│  │
+│  ├─ height(3):
+│  │  │ Both children None
+│  │  │ diameter = max(0, 0+0) = 0
+│  │  │ Return 1
+│  │
+│  └─ height(4):
+│     │ Both children None
+│     │ diameter = max(0, 0+0) = 0
+│     │ Return 1
+│  │
+│  diameter = max(0, 1+1) = 2 ← Diameter found here!
+│  Return 1 + max(1, 1) = 2
+│
+└─ height(None) → 0
+│
+diameter = max(2, 2+0) = 2
+Return 1 + max(2, 0) = 3
+
+Final diameter = 2 ✓
+```
+
+#### Why This Algorithm Works
+
+**Key insight breakdown:**
+
+```
+1. Height calculation:
+   height(node) = 1 + max(height(left), height(right))
+   Standard recursive height
+
+2. Diameter calculation:
+   At each node, diameter = left_height + right_height
+   This is the longest path THROUGH this node
+
+3. Global maximum:
+   Track max diameter seen across all nodes
+   Answer is the maximum of all node diameters
+
+4. Single traversal:
+   Calculate height bottom-up
+   Update diameter at each node
+   O(n) time!
+```
+
+**Visual proof:**
+
+```
+      A
+     / \
+    B   C
+   / \
+  D   E
+
+Diameter at A = height(B) + height(C)
+              = 2 + 1 = 3
+
+Path represented:
+- height(B) = 2 means we can go 2 edges down left (A→B→D)
+- height(C) = 1 means we can go 1 edge down right (A→C)
+- Total path: D→B→A→C (3 edges)
+
+This is the diameter through A!
+```
+
+#### Edge Cases
+
+**Edge Case 1: Empty tree**
+```python
+root = None
+diameter = 0
+Output: 0
+```
+
+**Edge Case 2: Single node**
+```python
+root = [1]
+
+height(1):
+  left = 0, right = 0
+  diameter = max(0, 0+0) = 0
+  Return 1
+
+Output: 0 (no edges)
+```
+
+**Edge Case 3: Two nodes**
+```python
+root = [1,2]
+
+Tree:
+  1
+ /
+2
+
+diameter through 1 = 1 + 0 = 1
+Output: 1 ✓
+```
+
+**Edge Case 4: Skewed tree**
+```python
+root = [1,2,null,3,null,4]
+
+Tree:
+1
+ \
+  2
+   \
+    3
+     \
+      4
+
+All diameters = 0 + height(right)
+Max at root: 0 + 3 = 3
+Output: 3
+```
+
+#### Common Mistakes
+
+**Mistake 1: Counting nodes instead of edges**
+```python
+# WRONG
+diameter = left_height + right_height + 1
+# +1 counts current node
+# But we count EDGES not NODES!
+
+# RIGHT
+diameter = left_height + right_height
+```
+
+**Mistake 2: Not checking all nodes**
+```python
+# WRONG
+def diameterOfBinaryTree(root):
+    if not root:
+        return 0
+    
+    left = height(root.left)
+    right = height(root.right)
+    return left + right  # Only checks root!
+
+# RIGHT
+# Must check diameter at EVERY node
+def height(node):
+    ...
+    diameter = max(diameter, left + right)  # Check at each node
+```
+
+**Mistake 3: Forgetting nonlocal**
+```python
+# WRONG
+def diameterOfBinaryTree(root):
+    diameter = 0
+    
+    def height(node):
+        diameter = max(diameter, left + right)
+        # Creates new local variable!
+    
+    return diameter  # Still 0!
+
+# RIGHT
+def diameterOfBinaryTree(root):
+    diameter = 0
+    
+    def height(node):
+        nonlocal diameter  # Modify outer variable
+        diameter = max(diameter, left + right)
+```
+
+**Mistake 4: Returning diameter instead of height**
+```python
+# WRONG
+def height(node):
+    ...
+    diameter = max(diameter, left + right)
+    return diameter  # Wrong! Should return height!
+
+# RIGHT
+def height(node):
+    ...
+    diameter = max(diameter, left + right)
+    return 1 + max(left, right)  # Return height for parent
+```
+
+#### Time & Space Complexity
+
+**Time Complexity: O(n)**
+- Visit each node exactly once
+- At each node: O(1) operations
+- Total: O(n)
+
+**Space Complexity: O(h)**
+- h = height of tree
+- Recursion stack depth
+- Best: O(log n) for balanced tree
+- Worst: O(n) for skewed tree
+
+**Comparison with naive approach:**
+
+```
+Naive:  Time O(n²), Space O(h)
+Optimal: Time O(n), Space O(h)
+
+Huge improvement for large trees!
+```
+
+---
+
+### Problem 8: Invert Binary Tree
+
+**[LeetCode 226 - Invert Binary Tree](https://leetcode.com/problems/invert-binary-tree/)**
+
+#### Problem Statement
+
+Given the `root` of a binary tree, invert the tree, and return its root.
+
+**Example 1:**
+```
+Input: root = [4,2,7,1,3,6,9]
+
+Before:
+      4
+     / \
+    2   7
+   / \ / \
+  1  3 6  9
+
+After:
+      4
+     / \
+    7   2
+   / \ / \
+  9  6 3  1
+
+Output: [4,7,2,9,6,3,1]
+```
+
+**Example 2:**
+```
+Input: root = [2,1,3]
+
+Before:
+    2
+   / \
+  1   3
+
+After:
+    2
+   / \
+  3   1
+
+Output: [2,3,1]
+```
+
+**Example 3:**
+```
+Input: root = []
+Output: []
+```
+
+#### Understanding the Problem
+
+**What is "invert"?**
+- Swap left and right children at EVERY node
+- Mirror image of the tree
+- Also called "mirror tree"
+
+**Visual:**
+
+```
+Original:
+      1
+     / \
+    2   3
+   / \
+  4   5
+
+Inverted:
+      1
+     / \
+    3   2
+       / \
+      5   4
+
+Every node's children are swapped!
+```
+
+**Step-by-step swap:**
+
+```
+Start:
+      1
+     / \
+    2   3
+   / \
+  4   5
+
+Swap at node 1:
+      1
+     / \
+    3   2    ← Swapped!
+   / \
+  4   5
+
+Swap at node 2:
+      1
+     / \
+    3   2
+       / \
+      5   4  ← Swapped!
+
+Done!
+```
+
+#### Naive Approach (Actually Works!)
+
+**Sometimes the obvious solution is the best!**
+
+**Algorithm:**
+1. Swap left and right children
+2. Recursively invert left subtree
+3. Recursively invert right subtree
+
+```python
+def invertTree(root: TreeNode) -> TreeNode:
+    if not root:
+        return None
+    
+    # Swap children
+    root.left, root.right = root.right, root.left
+    
+    # Recursively invert subtrees
+    invertTree(root.left)
+    invertTree(root.right)
+    
+    return root
+```
+
+**This is actually optimal! No need for "better" approach.**
+
+#### Why This Works
+
+**Key insight:** Swap, then recurse
+
+```
+      1
+     / \
+    2   3
+   /
+  4
+
+Step 1: Swap at root
+      1
+     / \
+    3   2
+       /
+      4
+
+Step 2: Recurse on left (3)
+No children, return
+
+Step 3: Recurse on right (2)
+      1
+     / \
+    3   2
+         \
+          4  ← Swapped!
+
+Done!
+```
+
+**Why swap first?**
+
+```
+Option 1: Swap first, then recurse
+root.left, root.right = root.right, root.left
+invertTree(root.left)
+invertTree(root.right)
+
+Option 2: Recurse first, then swap
+invertTree(root.left)
+invertTree(root.right)
+root.left, root.right = root.right, root.left
+
+Both work! Order doesn't matter.
+But swap-first is clearer.
+```
+
+#### Visual Step-by-Step
+
+```
+Tree:
+      1
+     / \
+    2   3
+   / \
+  4   5
+
+Call: invertTree(1)
+│
+├─ Swap: 1's children
+│  Tree now:
+│       1
+│      / \
+│     3   2
+│        / \
+│       4   5
+│
+├─ invertTree(3)
+│  │ 3 is leaf
+│  │ Return 3
+│
+└─ invertTree(2)
+   │
+   ├─ Swap: 2's children
+   │  Tree now:
+   │       1
+   │      / \
+   │     3   2
+   │        / \
+   │       5   4
+   │
+   ├─ invertTree(5)
+   │  │ 5 is leaf
+   │  │ Return 5
+   │
+   └─ invertTree(4)
+      │ 4 is leaf
+      │ Return 4
+
+Final tree:
+      1
+     / \
+    3   2
+       / \
+      5   4
+```
+
+#### Solution - Recursive
+
+```python
+def invertTree(root: TreeNode) -> TreeNode:
+    """
+    Invert binary tree recursively
+    
+    Time: O(n) - visit each node once
+    Space: O(h) - recursion depth
+    """
+    # Base case: empty tree
+    if not root:
+        return None
+    
+    # Swap children
+    root.left, root.right = root.right, root.left
+    
+    # Recursively invert subtrees
+    invertTree(root.left)
+    invertTree(root.right)
+    
+    return root
+```
+
+**Alternative: Swap after recursion**
+
+```python
+def invertTree(root: TreeNode) -> TreeNode:
+    if not root:
+        return None
+    
+    # Invert subtrees first
+    left = invertTree(root.left)
+    right = invertTree(root.right)
+    
+    # Then swap
+    root.left = right
+    root.right = left
+    
+    return root
+```
+
+**Both work equally well!**
+
+#### Solution - Iterative (BFS)
+
+```python
+from collections import deque
+
+def invertTree_BFS(root: TreeNode) -> TreeNode:
+    """
+    Invert using BFS (level order)
+    """
+    if not root:
+        return None
+    
+    queue = deque([root])
+    
+    while queue:
+        node = queue.popleft()
+        
+        # Swap children
+        node.left, node.right = node.right, node.left
+        
+        # Add children to queue
+        if node.left:
+            queue.append(node.left)
+        if node.right:
+            queue.append(node.right)
+    
+    return root
+```
+
+**Trace:**
+
+```python
+Tree:
+      1
+     / \
+    2   3
+   /
+  4
+
+Initial:
+queue = [1]
+
+Iteration 1:
+node = 1
+Swap children: [3, 2]
+Add 3, 2 to queue
+queue = [3, 2]
+
+Tree now:
+      1
+     / \
+    3   2
+       /
+      4
+
+Iteration 2:
+node = 3
+Swap children: None
+queue = [2]
+
+Iteration 3:
+node = 2
+Swap children: [None, 4] → [4, None]
+Add 4
+queue = [4]
+
+Tree now:
+      1
+     / \
+    3   2
+         \
+          4
+
+Iteration 4:
+node = 4
+Swap children: None
+queue = []
+
+Done!
+```
+
+#### Solution - Iterative (DFS)
+
+```python
+def invertTree_DFS(root: TreeNode) -> TreeNode:
+    """
+    Invert using DFS with stack
+    """
+    if not root:
+        return None
+    
+    stack = [root]
+    
+    while stack:
+        node = stack.pop()
+        
+        # Swap children
+        node.left, node.right = node.right, node.left
+        
+        # Add children to stack
+        if node.left:
+            stack.append(node.left)
+        if node.right:
+            stack.append(node.right)
+    
+    return root
+```
+
+#### Detailed Trace
+
+```python
+Tree:
+      1
+     / \
+    2   3
+   / \   \
+  4   5   6
+
+invertTree(1):
+│ Swap: left=2, right=3 → left=3, right=2
+│
+├─ invertTree(3):
+│  │ Swap: left=None, right=6 → left=6, right=None
+│  │
+│  ├─ invertTree(6):
+│  │  │ 6 is leaf
+│  │  │ Return 6
+│  │
+│  └─ invertTree(None):
+│     │ Return None
+│  │
+│  Return 3
+│
+└─ invertTree(2):
+   │ Swap: left=4, right=5 → left=5, right=4
+   │
+   ├─ invertTree(5):
+   │  │ 5 is leaf
+   │  │ Return 5
+   │
+   └─ invertTree(4):
+      │ 4 is leaf
+      │ Return 4
+   │
+   Return 2
+
+Return 1
+
+Final tree:
+      1
+     / \
+    3   2
+   /   / \
+  6   5   4
+```
+
+#### Edge Cases
+
+**Edge Case 1: Empty tree**
+```python
+root = None
+Output: None
+```
+
+**Edge Case 2: Single node**
+```python
+root = [1]
+
+No children to swap
+Output: [1]
+```
+
+**Edge Case 3: Only left child**
+```python
+root = [1,2]
+
+Before:
+  1
+ /
+2
+
+After:
+  1
+   \
+    2
+
+Swapped!
+```
+
+**Edge Case 4: Only right child**
+```python
+root = [1,null,2]
+
+Before:
+  1
+   \
+    2
+
+After:
+  1
+ /
+2
+
+Swapped!
+```
+
+**Edge Case 5: Complete tree**
+```python
+root = [1,2,3,4,5,6,7]
+
+Before:
+       1
+      / \
+     2   3
+    / \ / \
+   4  5 6  7
+
+After:
+       1
+      / \
+     3   2
+    / \ / \
+   7  6 5  4
+```
+
+#### Common Mistakes
+
+**Mistake 1: Only swapping once**
+```python
+# WRONG
+def invertTree(root):
+    if not root:
+        return None
+    
+    root.left, root.right = root.right, root.left
+    # Forgot to recurse!
+    return root
+
+# Only swaps root's children
+# Doesn't invert subtrees!
+
+# RIGHT
+root.left, root.right = root.right, root.left
+invertTree(root.left)
+invertTree(root.right)
+```
+
+**Mistake 2: Incorrect swap**
+```python
+# WRONG
+temp = root.left
+root.left = root.right
+root.right = root.left  # This is root.right, not temp!
+
+# RIGHT
+temp = root.left
+root.left = root.right
+root.right = temp
+
+# OR use Python's tuple swap
+root.left, root.right = root.right, root.left
+```
+
+**Mistake 3: Modifying during iteration (iterative)**
+```python
+# CAREFUL
+if node.left:
+    stack.append(node.left)
+if node.right:
+    stack.append(node.right)
+
+node.left, node.right = node.right, node.left
+
+# After swap, node.left and node.right are different!
+# But we already added them to stack
+# This is actually OK! We added the correct nodes.
+
+# Just make sure you swap AFTER or BEFORE adding
+# Not in between!
+```
+
+#### Comparison of Approaches
+
+```
+Recursive DFS:
+✓ Cleanest code
+✓ Easy to understand
+✓ Natural recursion
+Space: O(h)
+
+Iterative BFS:
+✓ No recursion (stack overflow safe)
+✓ Level by level
+Space: O(w)
+
+Iterative DFS:
+✓ No recursion
+✓ Similar to recursive
+Space: O(h)
+
+All have same time: O(n)
+Choose based on preference!
+```
+
+#### Time & Space Complexity
+
+**Time Complexity: O(n)**
+- Visit each node exactly once
+- O(1) swap at each node
+- Total: O(n)
+
+**Space Complexity:**
+- Recursive: O(h) for call stack
+  - Best: O(log n) balanced
+  - Worst: O(n) skewed
+- Iterative: O(w) for queue/stack
+  - Best: O(1) skewed
+  - Worst: O(n/2) = O(n) complete tree
+
+---
+
+### Problem 9: Lowest Common Ancestor of a Binary Tree
+
+**[LeetCode 236 - Lowest Common Ancestor of a Binary Tree](https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-tree/)**
+
+#### Problem Statement
+
+Given a binary tree, find the lowest common ancestor (LCA) of two given nodes in the tree.
+
+According to the definition of LCA: "The lowest common ancestor is defined between two nodes `p` and `q` as the lowest node in the tree that has both `p` and `q` as descendants (where we allow **a node to be a descendant of itself**)."
+
+**Example 1:**
+```
+Input: root = [3,5,1,6,2,0,8,null,null,7,4], p = 5, q = 1
+
+Tree:
+         3
+       /   \
+      5     1
+     / \   / \
+    6   2 0   8
+       / \
+      7   4
+
+Output: 3
+
+Explanation: LCA of nodes 5 and 1 is 3
+```
+
+**Example 2:**
+```
+Input: root = [3,5,1,6,2,0,8,null,null,7,4], p = 5, q = 4
+
+Tree:
+         3
+       /   \
+      5     1
+     / \   / \
+    6   2 0   8
+       / \
+      7   4
+
+Output: 5
+
+Explanation: LCA of nodes 5 and 4 is 5, since a node can be a descendant of itself
+```
+
+**Example 3:**
+```
+Input: root = [1,2], p = 1, q = 2
+Output: 1
+```
+
+#### Understanding the Problem
+
+**What is Lowest Common Ancestor (LCA)?**
+
+The LCA is the deepest node that is an ancestor of both nodes.
+
+**Visual:**
+```
+         3
+       /   \
+      5     1
+     / \   / \
+    6   2 0   8
+       / \
+      7   4
+
+LCA(6, 4) = ?
+
+Ancestors of 6: 6, 5, 3
+Ancestors of 4: 4, 2, 5, 3
+
+Common ancestors: 5, 3
+Lowest (deepest) common: 5 ✓
+```
+
+**Important:** Node can be ancestor of itself!
+
+```
+         3
+       /   \
+      5     1
+     / \
+    6   2
+
+LCA(5, 6) = ?
+
+Ancestors of 5: 5, 3
+Ancestors of 6: 6, 5, 3
+
+Common: 5, 3
+Lowest: 5 ✓
+
+5 is ancestor of itself!
+```
+
+#### Key Observations
+
+**Observation 1:** LCA is where paths to p and q split
+
+```
+         3
+       /   \
+      5     1
+     / \
+    6   2
+
+Path to 6: 3 → 5 → 6
+Path to 2: 3 → 5 → 2
+
+Paths split at 5!
+LCA(6, 2) = 5
+```
+
+**Observation 2:** If one node is ancestor of other, it's the LCA
+
+```
+         3
+       /   \
+      5     1
+     / \
+    6   2
+
+5 is ancestor of 6
+LCA(5, 6) = 5
+```
+
+**Observation 3:** Three cases at any node
+
+```
+At node N:
+
+Case 1: p in left, q in right
+        → N is LCA!
+
+Case 2: Both p and q in left
+        → LCA is in left subtree
+
+Case 3: Both p and q in right
+        → LCA is in right subtree
+```
+
+#### Naive Approach (Inefficient)
+
+**Attempt 1: Find paths to both nodes, then compare**
+
+```python
+def lowestCommonAncestor(root, p, q):
+    # Find path from root to p
+    def findPath(node, target, path):
+        if not node:
+            return False
+        
+        path.append(node)
+        
+        if node == target:
+            return True
+        
+        if findPath(node.left, target, path) or \
+           findPath(node.right, target, path):
+            return True
+        
+        path.pop()
+        return False
+    
+    path_p = []
+    path_q = []
+    findPath(root, p, path_p)
+    findPath(root, q, path_q)
+    
+    # Find last common node
+    lca = None
+    for i in range(min(len(path_p), len(path_q))):
+        if path_p[i] == path_q[i]:
+            lca = path_p[i]
+        else:
+            break
+    
+    return lca
+```
+
+**Problems:**
+- Two separate traversals
+- Store entire paths: O(n) space
+- More complex than needed
+
+**Example:**
+```
+         3
+       /   \
+      5     1
+     / \
+    6   2
+
+path_p (to 6): [3, 5, 6]
+path_q (to 2): [3, 5, 2]
+
+Compare:
+i=0: 3 == 3 ✓ lca = 3
+i=1: 5 == 5 ✓ lca = 5
+i=2: 6 != 2 ✗ stop
+
+Return 5 ✓
+```
+
+#### Optimal Approach: Recursive DFS
+
+**Key insight:** Recursively search in both subtrees!
+
+**Algorithm:**
+1. If current node is p or q, return it
+2. Recursively search in left and right subtrees
+3. If p and q found in different subtrees → current node is LCA
+4. If both in same subtree → LCA is in that subtree
+
+**Return values:**
+- `None`: Neither p nor q found
+- `p or q`: Found one of them (or their LCA)
+- When both subtrees return non-None → current is LCA!
+
+#### Visual Step-by-Step
+
+```
+Tree:
+         3
+       /   \
+      5     1
+     / \   / \
+    6   2 0   8
+       / \
+      7   4
+
+Find LCA(6, 4)
+
+
+LCA(3):
+│
+├─ LCA(5):
+│  │
+│  ├─ LCA(6):
+│  │  │ node == p, return 6
+│  │
+│  └─ LCA(2):
+│     │
+│     ├─ LCA(7):
+│     │  │ Not p or q, check children
+│     │  │ Both None
+│     │  │ Return None
+│     │
+│     └─ LCA(4):
+│        │ node == q, return 4
+│     │
+│     left = None, right = 4
+│     Return 4
+│  │
+│  left = 6, right = 4
+│  Both non-None! → 5 is LCA ✓
+│  Return 5
+│
+└─ LCA(1):
+   │ (not explored, already found LCA)
+│
+Return 5 ✓
+```
+
+**Another example:**
+
+```
+Tree:
+         3
+       /   \
+      5     1
+     / \
+    6   2
+
+Find LCA(5, 6)
+
+
+LCA(3):
+│
+├─ LCA(5):
+│  │ node == p, return 5 immediately!
+│
+└─ (right not needed)
+│
+left = 5, right = None
+Return 5 ✓
+
+(5 is ancestor of itself and 6)
+```
+
+#### Solution
+
+```python
+def lowestCommonAncestor(root: TreeNode, p: TreeNode, q: TreeNode) -> TreeNode:
+    """
+    Find LCA using recursive DFS
+    
+    Time: O(n) - visit all nodes in worst case
+    Space: O(h) - recursion depth
+    """
+    # Base case: reached null or found p or q
+    if not root or root == p or root == q:
+        return root
+    
+    # Search in left and right subtrees
+    left = lowestCommonAncestor(root.left, p, q)
+    right = lowestCommonAncestor(root.right, p, q)
+    
+    # If both sides found something, current node is LCA
+    if left and right:
+        return root
+    
+    # Otherwise, return whichever side found something
+    return left if left else right
+```
+
+**Understanding the return logic:**
+
+```python
+# Case 1: Both left and right are non-None
+if left and right:
+    return root
+# This means p in one subtree, q in other
+# Current node is LCA!
+
+# Case 2: Only left is non-None
+return left
+# Either:
+# - Only p or q is in left subtree
+# - Both p and q are in left subtree (LCA already found)
+
+# Case 3: Only right is non-None
+return right
+# Similar to case 2
+
+# Case 4: Both None
+return None
+# Neither p nor q found here
+```
+
+#### Detailed Trace
+
+```python
+Tree:
+         3
+       /   \
+      5     1
+     / \   / \
+    6   2 0   8
+
+Find LCA(6, 8)
+
+Call tree with return values:
+
+LCA(3, 6, 8):
+│
+├─ LCA(5, 6, 8):
+│  │
+│  ├─ LCA(6, 6, 8):
+│  │  │ root == p
+│  │  │ Return 6 ✓
+│  │
+│  └─ LCA(2, 6, 8):
+│     │
+│     ├─ LCA(7, 6, 8):
+│     │  │ Neither p nor q
+│     │  │ left = None, right = None
+│     │  │ Return None
+│     │
+│     └─ LCA(4, 6, 8):
+│        │ Neither p nor q
+│        │ left = None, right = None
+│        │ Return None
+│     │
+│     left = None, right = None
+│     Return None
+│  │
+│  left = 6, right = None
+│  Return 6
+│
+└─ LCA(1, 6, 8):
+   │
+   ├─ LCA(0, 6, 8):
+   │  │ Neither p nor q
+   │  │ Return None
+   │
+   └─ LCA(8, 6, 8):
+      │ root == q
+      │ Return 8 ✓
+   │
+   left = None, right = 8
+   Return 8
+│
+left = 6, right = 8
+Both non-None! ← p and q in different subtrees
+Return 3 ✓
+
+Answer: 3
+```
+
+**Example where node is ancestor of itself:**
+
+```python
+Tree:
+         3
+       /   \
+      5     1
+     / \
+    6   2
+       / \
+      7   4
+
+Find LCA(5, 4)
+
+LCA(3, 5, 4):
+│
+├─ LCA(5, 5, 4):
+│  │ root == p
+│  │ Return 5 immediately! ✓
+│  │ (Don't even check children)
+│
+└─ (right not evaluated - left already returned)
+│
+left = 5, right = None
+Return 5 ✓
+
+Answer: 5 (5 is ancestor of itself and 4)
+```
+
+#### Why This Algorithm Works
+
+**Key insight: Early return when finding p or q**
+
+```python
+if not root or root == p or root == q:
+    return root
+```
+
+**Why return immediately when we find p or q?**
+
+```
+Case 1: p is ancestor of q
+         p
+        /
+       ...
+        \
+         q
+
+When we reach p, we return immediately
+We don't go down to find q
+But that's OK! Because:
+- If q exists, it MUST be in p's subtree
+- p is the LCA!
+
+Case 2: p and q in different subtrees
+         LCA
+        /   \
+       p     q
+
+We return p from left subtree
+We return q from right subtree
+LCA sees both → returns itself
+```
+
+**Why "left if left else right" works:**
+
+```python
+return left if left else right
+
+This handles:
+
+1. left = p, right = None
+   → Return p (might be LCA, or p is deeper)
+
+2. left = None, right = q
+   → Return q (similar to above)
+
+3. left = None, right = None
+   → Return None (neither found)
+
+4. left = something, right = something
+   → Already handled by "if left and right"
+```
+
+#### Iterative Solution (More Complex)
+
+**Using parent pointers:**
+
+```python
+def lowestCommonAncestor_iterative(root, p, q):
+    """
+    Store parent pointers, then find common ancestor
+    """
+    # Store parent of each node
+    parent = {root: None}
+    stack = [root]
+    
+    # Build parent map until we find both p and q
+    while p not in parent or q not in parent:
+        node = stack.pop()
+        
+        if node.left:
+            parent[node.left] = node
+            stack.append(node.left)
+        if node.right:
+            parent[node.right] = node
+            stack.append(node.right)
+    
+    # Get ancestors of p
+    ancestors = set()
+    while p:
+        ancestors.add(p)
+        p = parent[p]
+    
+    # Find first common ancestor
+    while q not in ancestors:
+        q = parent[q]
+    
+    return q
+```
+
+**Trace:**
+```python
+Tree:
+         3
+       /   \
+      5     1
+     / \
+    6   2
+
+Find LCA(6, 2)
+
+Build parent map:
+parent = {
+    3: None,
+    5: 3,
+    1: 3,
+    6: 5,
+    2: 5
+}
+
+Ancestors of 6:
+Start at 6
+ancestors = {6}
+Go to parent: 5
+ancestors = {6, 5}
+Go to parent: 3
+ancestors = {6, 5, 3}
+Go to parent: None, stop
+
+Find first common ancestor of 2:
+Start at 2
+2 in ancestors? No
+Go to parent: 5
+5 in ancestors? Yes! ✓
+
+Return 5
+```
+
+#### Edge Cases
+
+**Edge Case 1: One node is root**
+```python
+root = [1,2], p = 1, q = 2
+
+Tree:
+  1
+ /
+2
+
+LCA(1, 2) = 1 (root is ancestor of 2)
+```
+
+**Edge Case 2: Both nodes are children of root**
+```python
+root = [1,2,3], p = 2, q = 3
+
+Tree:
+    1
+   / \
+  2   3
+
+LCA(2, 3) = 1
+```
+
+**Edge Case 3: Nodes at different levels**
+```python
+Tree:
+      1
+     /
+    2
+   /
+  3
+
+LCA(2, 3) = 2
+```
+
+**Edge Case 4: Node is LCA of itself**
+```python
+Tree:
+      1
+     /
+    2
+   /
+  3
+
+LCA(2, 2) = 2
+```
+
+#### Common Mistakes
+
+**Mistake 1: Not returning when finding p or q**
+```python
+# WRONG
+def lowestCommonAncestor(root, p, q):
+    if not root:
+        return None
+    
+    # Forgot to check if root == p or root == q!
+    
+    left = lowestCommonAncestor(root.left, p, q)
+    right = lowestCommonAncestor(root.right, p, q)
+    ...
+
+# RIGHT
+if not root or root == p or root == q:
+    return root
+```
+
+**Mistake 2: Wrong return logic**
+```python
+# WRONG
+if left and right:
+    return root
+else:
+    return None  # Lost the found node!
+
+# RIGHT
+if left and right:
+    return root
+return left if left else right  # Propagate found node up
+```
+
+**Mistake 3: Checking values instead of nodes**
+```python
+# WRONG
+if root.val == p or root.val == q:
+    return root
+
+# RIGHT
+if root == p or root == q:
+    return root
+
+# p and q are TreeNode objects, not values!
+```
+
+**Mistake 4: Assuming p and q always exist**
+```python
+# The problem guarantees p and q exist in tree
+# But good practice to handle:
+
+if not root:
+    return None
+
+# Already handles non-existent nodes
+```
+
+#### Variation: Binary Search Tree (BST)
+
+**[LeetCode 235 - Lowest Common Ancestor of BST](https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-search-tree/)**
+
+For BST, we can use the ordering property!
+
+```python
+def lowestCommonAncestor_BST(root, p, q):
+    """
+    Use BST property: left < root < right
+    """
+    while root:
+        # Both in left subtree
+        if p.val < root.val and q.val < root.val:
+            root = root.left
+        # Both in right subtree
+        elif p.val > root.val and q.val > root.val:
+            root = root.right
+        # Split point found!
+        else:
+            return root
+```
+
+**Why this works:**
+
+```
+BST:
+      6
+     / \
+    2   8
+   / \ / \
+  0  4 7  9
+
+LCA(2, 8):
+
+At 6: 2 < 6 < 8
+      Split point! Return 6 ✓
+
+LCA(2, 4):
+
+At 6: both 2 and 4 < 6
+      Go left
+At 2: 2 ≤ 2 ≤ 4
+      Split point! Return 2 ✓
+```
+
+#### Time & Space Complexity
+
+**Time Complexity: O(n)**
+- Worst case: Visit all nodes
+- Example: Skewed tree, nodes at opposite ends
+- Best case: O(h) if nodes close to root
+
+**Space Complexity: O(h)**
+- Recursion stack depth
+- Best: O(log n) for balanced tree
+- Worst: O(n) for skewed tree
+
+**Comparison:**
+
+```
+Naive (path storage):
+Time: O(n) - two traversals
+Space: O(n) - store paths
+
+Optimal (recursive):
+Time: O(n) - single traversal
+Space: O(h) - recursion only
+
+Iterative (parent pointers):
+Time: O(n)
+Space: O(n) - parent map
+
+Best: Recursive approach!
+```
+
+---
+
+## Binary Trees - Complete Summary
+
+### Key Concepts Covered
+
+**1. Tree Types**
+- Full Binary Tree
+- Complete Binary Tree
+- Perfect Binary Tree
+- Balanced Binary Tree
+- Degenerate Tree
+
+**2. Traversal Methods**
+- BFS (Level Order)
+- DFS Preorder
+- DFS Inorder
+- DFS Postorder
+
+**3. Common Patterns**
+
+```python
+# Pattern 1: Level-by-level processing
+while queue:
+    level_size = len(queue)
+    for _ in range(level_size):
+        node = queue.popleft()
+        # Process node
+
+# Pattern 2: Height calculation
+def height(node):
+    if not node:
+        return 0
+    return 1 + max(height(node.left), height(node.right))
+
+# Pattern 3: Path problems
+def hasPath(node, target):
+    if not node:
+        return False
+    if is_leaf(node):
+        return check_condition
+    return hasPath(node.left, ...) or hasPath(node.right, ...)
+
+# Pattern 4: Global variable tracking
+self.result = initial
+def helper(node):
+    # Update self.result
+    helper(node.left)
+    helper(node.right)
+```
+
+### Problem Categories
+
+**Level Order Problems:**
+- Average of Levels
+- Level Order Traversal
+- Zigzag Level Order
+- Right Side View
+
+**Height/Depth Problems:**
+- Min Depth
+- Max Depth
+- Balanced Tree
+- Diameter
+
+**Path Problems:**
+- Path Sum
+- Binary Tree Paths
+- Sum Root to Leaf
+
+**Tree Modification:**
+- Invert Tree
+- Flatten Tree
+- Merge Trees
+
+**Comparison/Search:**
+- Same Tree
+- Symmetric Tree
+- Lowest Common Ancestor
+
+### When to Use What
+
+```
+Need level-by-level? → BFS
+Need all paths? → DFS
+BST in sorted order? → Inorder DFS
+Copy/serialize tree? → Preorder DFS
+Delete tree? → Postorder DFS
+
+Need shortest path? → BFS
+Need to explore all? → DFS
+
+Tracking max/min across tree? → Global variable
+Need path information? → Pass down parameters
+```
+
+### Time/Space Complexity Patterns
+
+```
+Single traversal: O(n) time
+Height calculation: O(n) time, O(h) space
+
+BFS space: O(w) where w = max width
+DFS space: O(h) where h = height
+
+Balanced tree: h = O(log n)
+Skewed tree: h = O(n)
+
+Complete tree: w = O(n/2) = O(n)
+```
