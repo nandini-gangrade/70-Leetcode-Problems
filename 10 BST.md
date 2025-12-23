@@ -2104,3 +2104,1122 @@ Both O(n), but set approach:
 ```
 
 ---
+
+### Problem 5: Lowest Common Ancestor of a Binary Search Tree
+
+**[LeetCode 235 - Lowest Common Ancestor of a Binary Search Tree](https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-search-tree/)**
+
+#### Problem Statement
+
+Given a binary search tree (BST), find the lowest common ancestor (LCA) of two given nodes in the BST.
+
+According to the definition of LCA: "The lowest common ancestor is defined between two nodes `p` and `q` as the lowest node in T that has both `p` and `q` as descendants (where we allow a node to be a descendant of itself)."
+
+**Example 1:**
+```
+Input: root = [6,2,8,0,4,7,9,null,null,3,5], p = 2, q = 8
+
+Tree:
+         6
+       /   \
+      2     8
+     / \   / \
+    0   4 7   9
+       / \
+      3   5
+
+Output: 6
+Explanation: LCA of 2 and 8 is 6
+```
+
+**Example 2:**
+```
+Input: root = [6,2,8,0,4,7,9,null,null,3,5], p = 2, q = 4
+
+Tree:
+         6
+       /   \
+      2     8
+     / \   / \
+    0   4 7   9
+       / \
+      3   5
+
+Output: 2
+Explanation: LCA of 2 and 4 is 2 (node can be ancestor of itself)
+```
+
+#### Understanding the BST Property
+
+**Key difference from regular binary tree:**
+
+In BST, we have ordering!
+- Left < Root < Right
+- This makes finding LCA much easier!
+
+**Visual:**
+```
+Regular Binary Tree:
+      1
+     / \
+    2   3
+   / \
+  4   5
+
+Must check both subtrees
+Can't predict where nodes are
+
+BST:
+      6
+     / \
+    2   8
+   / \
+  0   4
+
+Can predict node locations by values!
+If value < 6 → must be in left
+If value > 6 → must be in right
+```
+
+#### Key Insight: Using BST Property
+
+**Three cases at any node:**
+
+```
+Case 1: Both p and q < current
+        → LCA is in LEFT subtree
+
+         6
+        / \
+       2   8
+      / \
+     0   4
+
+p=0, q=4, current=6
+Both 0,4 < 6 → Go left
+
+
+Case 2: Both p and q > current
+        → LCA is in RIGHT subtree
+
+         6
+        / \
+       2   8
+      / \
+     7   9
+
+p=7, q=9, current=6
+Both 7,9 > 6 → Go right
+
+
+Case 3: p ≤ current ≤ q (or q ≤ current ≤ p)
+        → Current node IS the LCA!
+
+         6
+        / \
+       2   8
+
+p=2, q=8, current=6
+2 < 6 < 8 → Found LCA!
+```
+
+**Why case 3 works:**
+```
+If p < current < q:
+
+p is in left subtree (because p < current)
+q is in right subtree (because q > current)
+
+Current node is the split point!
+This is the LCA!
+
+         current
+         /     \
+      p is     q is
+      here     here
+```
+
+#### Visual Step-by-Step
+
+```
+Tree:
+         6
+       /   \
+      2     8
+     / \   / \
+    0   4 7   9
+
+Find LCA(2, 8):
+
+Step 1: At 6
+p=2, q=8
+Is 2 < 6 < 8? Yes! ✓
+Found LCA: 6
+```
+
+```
+Find LCA(0, 4):
+
+Step 1: At 6
+p=0, q=4
+Both < 6 → Go left
+
+Step 2: At 2
+p=0, q=4
+Is 0 < 2 < 4? Yes! ✓
+(Or check: 0 ≤ 2 ≤ 4)
+Found LCA: 2
+```
+
+```
+Find LCA(2, 4):
+
+Step 1: At 6
+p=2, q=4
+Both < 6 → Go left
+
+Step 2: At 2
+p=2, q=4
+Is 2 ≤ 2 ≤ 4? Yes! ✓
+(2 is ancestor of itself)
+Found LCA: 2
+```
+
+#### Solution - Recursive
+
+```python
+def lowestCommonAncestor(root: TreeNode, p: TreeNode, q: TreeNode) -> TreeNode:
+    """
+    Find LCA in BST using recursion
+    
+    Time: O(h) where h = height
+          O(log n) balanced, O(n) skewed
+    Space: O(h) - recursion stack
+    """
+    
+    # Get values for easier comparison
+    current_val = root.val
+    p_val = p.val
+    q_val = q.val
+    
+    # Case 1: Both in left subtree
+    if p_val < current_val and q_val < current_val:
+        return lowestCommonAncestor(root.left, p, q)
+    
+    # Case 2: Both in right subtree
+    elif p_val > current_val and q_val > current_val:
+        return lowestCommonAncestor(root.right, p, q)
+    
+    # Case 3: Split point (LCA found)
+    else:
+        return root
+```
+
+**Understanding the conditions:**
+
+```python
+if p_val < current_val and q_val < current_val:
+```
+**What this checks:**
+```
+Are BOTH p and q smaller than current?
+
+Example: current=6, p=2, q=4
+2 < 6? Yes
+4 < 6? Yes
+Both are in left subtree!
+```
+
+```python
+elif p_val > current_val and q_val > current_val:
+```
+**What this checks:**
+```
+Are BOTH p and q larger than current?
+
+Example: current=6, p=7, q=8
+7 > 6? Yes
+8 > 6? Yes
+Both are in right subtree!
+```
+
+```python
+else:
+    return root
+```
+**What this handles:**
+```
+All other cases:
+1. p < current < q
+2. q < current < p
+3. p == current
+4. q == current
+
+All mean current is the LCA!
+
+Examples:
+current=6, p=2, q=8 → 2 < 6 < 8
+current=2, p=0, q=4 → 0 < 2 < 4
+current=2, p=2, q=4 → 2 == 2 ≤ 4
+```
+
+#### Solution - Iterative (Preferred!)
+
+```python
+def lowestCommonAncestor(root: TreeNode, p: TreeNode, q: TreeNode) -> TreeNode:
+    """
+    Iterative solution - more efficient
+    
+    Time: O(h)
+    Space: O(1) - no recursion!
+    """
+    
+    current = root
+    
+    while current:
+        # Both in left subtree
+        if p.val < current.val and q.val < current.val:
+            current = current.left
+        
+        # Both in right subtree
+        elif p.val > current.val and q.val > current.val:
+            current = current.right
+        
+        # Found LCA (split point)
+        else:
+            return current
+```
+
+**Why iterative is better here:**
+```
+1. No recursion overhead
+2. O(1) space instead of O(h)
+3. Easier to understand
+4. More efficient
+
+BST is one of few tree problems where
+iterative is SIMPLER than recursive!
+```
+
+#### Detailed Trace
+
+```python
+Tree:
+         6
+       /   \
+      2     8
+     / \   / \
+    0   4 7   9
+       / \
+      3   5
+
+Find LCA(3, 5):
+
+current = 6
+3 < 6? Yes
+5 < 6? Yes
+Both in left subtree
+current = 2
+
+current = 2
+3 < 2? No
+5 < 2? No
+Not both in left
+
+3 > 2? Yes
+5 > 2? Yes
+Both in right subtree
+current = 4
+
+current = 4
+3 < 4? Yes
+5 < 4? No
+Not both in left
+
+3 > 4? No
+5 > 4? Yes
+Not both in right
+
+else case! → Split point
+Return 4 ✓
+```
+
+**Another example:**
+
+```python
+Tree:
+         6
+       /   \
+      2     8
+     / \   / \
+    0   4 7   9
+
+Find LCA(0, 9):
+
+current = 6
+0 < 6? Yes
+9 < 6? No
+Not both in left
+
+0 > 6? No
+9 > 6? Yes
+Not both in right
+
+else case! → Split point
+Return 6 ✓
+
+(Makes sense: 0 in left, 9 in right)
+```
+
+**One more:**
+
+```python
+Tree:
+         6
+       /   \
+      2     8
+     / \   / \
+    0   4 7   9
+
+Find LCA(6, 8):
+
+current = 6
+6 < 6? No
+8 < 6? No
+Not both in left
+
+6 > 6? No
+8 > 6? Yes
+Not both in right
+
+else case!
+Return 6 ✓
+
+(6 is ancestor of itself and 8)
+```
+
+#### Comparison: BST vs Regular Binary Tree
+
+**BST version (this problem):**
+```python
+def lowestCommonAncestor_BST(root, p, q):
+    while root:
+        if p.val < root.val and q.val < root.val:
+            root = root.left
+        elif p.val > root.val and q.val > root.val:
+            root = root.right
+        else:
+            return root
+
+Time: O(h)
+Space: O(1)
+```
+
+**Regular Binary Tree version:**
+```python
+def lowestCommonAncestor_BT(root, p, q):
+    if not root or root == p or root == q:
+        return root
+    
+    left = lowestCommonAncestor_BT(root.left, p, q)
+    right = lowestCommonAncestor_BT(root.right, p, q)
+    
+    if left and right:
+        return root
+    return left if left else right
+
+Time: O(n) - must check all nodes
+Space: O(h) - recursion
+```
+
+**Key difference:**
+```
+BST: Can decide direction without checking subtrees!
+     Only need to compare values
+
+BT:  Must explore both subtrees
+     Can't predict where nodes are
+```
+
+#### Edge Cases
+
+**Edge Case 1: One node is ancestor of other**
+```python
+Tree:
+      6
+     / \
+    2   8
+   /
+  0
+
+LCA(2, 0) = 2
+
+At 6: 2 < 6, 0 < 6 → go left
+At 2: 0 < 2, but 2 == 2
+      else case → return 2 ✓
+```
+
+**Edge Case 2: Nodes at same level**
+```python
+Tree:
+      6
+     / \
+    2   8
+
+LCA(2, 8) = 6
+
+At 6: 2 < 6, 8 > 6
+      Split point → return 6 ✓
+```
+
+**Edge Case 3: Root is LCA**
+```python
+Tree:
+      6
+     / \
+    2   8
+
+LCA(6, 8) = 6
+
+At 6: 6 == 6, 8 > 6
+      else case → return 6 ✓
+```
+
+**Edge Case 4: Both nodes same value**
+```python
+LCA(5, 5) = 5
+
+At any node containing 5:
+else case → return that node
+```
+
+#### Common Mistakes
+
+**Mistake 1: Using == instead of < and >**
+```python
+# WRONG
+if p.val == root.val or q.val == root.val:
+    return root
+
+# Doesn't handle case where node is between p and q!
+
+# RIGHT
+# Use the three-case logic
+if both < root: go left
+elif both > root: go right
+else: return root
+```
+
+**Mistake 2: Not handling "equal" case**
+```python
+# WRONG
+if p.val < root.val and q.val < root.val:
+    return ...
+if p.val > root.val and q.val > root.val:
+    return ...
+# What if p.val == root.val?
+
+# RIGHT
+# else clause handles all equal cases
+else:
+    return root
+```
+
+**Mistake 3: Comparing wrong values**
+```python
+# WRONG
+if p < root.val:  # Comparing TreeNode to int!
+
+# RIGHT
+if p.val < root.val:  # Compare values
+```
+
+**Mistake 4: Checking only one node**
+```python
+# WRONG
+if p.val < root.val:  # What about q?
+    root = root.left
+
+# RIGHT
+if p.val < root.val and q.val < root.val:
+    root = root.left
+```
+
+#### Time & Space Complexity
+
+**Time Complexity: O(h)**
+```
+h = height of tree
+
+Best case (balanced BST): O(log n)
+         6
+       /   \
+      3     9
+     / \   / \
+    1   4 7  10
+
+Height = log n
+
+Worst case (skewed BST): O(n)
+    1
+     \
+      2
+       \
+        3
+         \
+          4
+
+Height = n
+```
+
+**Space Complexity:**
+```
+Iterative: O(1) - no extra space
+Recursive: O(h) - call stack
+
+Iterative preferred! ✓
+```
+
+---
+
+### Problem 6: Minimum Absolute Difference in BST
+
+**[LeetCode 530 - Minimum Absolute Difference in BST](https://leetcode.com/problems/minimum-absolute-difference-in-bst/)**
+
+#### Problem Statement
+
+Given the `root` of a Binary Search Tree (BST), return the minimum absolute difference between the values of any two different nodes in the tree.
+
+**Example 1:**
+```
+Input: root = [4,2,6,1,3]
+
+Tree:
+      4
+     / \
+    2   6
+   / \
+  1   3
+
+Output: 1
+Explanation: 
+Differences:
+|4-3| = 1 ← Minimum
+|2-1| = 1 ← Also minimum
+|3-2| = 1
+|6-4| = 2
+```
+
+**Example 2:**
+```
+Input: root = [1,0,48,null,null,12,49]
+
+Tree:
+        1
+       / \
+      0   48
+         /  \
+        12  49
+
+Output: 1
+Explanation: |1-0| = 1
+```
+
+#### Understanding the Problem
+
+**What we're looking for:**
+- Absolute difference between ANY two nodes
+- Find the MINIMUM such difference
+
+**Absolute difference:**
+```
+|a - b| = absolute value of (a - b)
+
+Examples:
+|5 - 3| = 2
+|3 - 5| = 2 (same!)
+|-2 - 1| = |-3| = 3
+```
+
+**Naive approach:**
+```
+Check all pairs of nodes
+Find minimum difference
+
+For n nodes:
+Pairs = n × (n-1) / 2
+Time: O(n²)
+
+Can we do better?
+```
+
+#### Key Insight: Inorder Traversal Gives Sorted Order!
+
+**Critical BST property:**
+
+```
+BST:
+      4
+     / \
+    2   6
+   / \
+  1   3
+
+Inorder: [1, 2, 3, 4, 6]
+         ↑ ↑ ↑ ↑ ↑
+       Sorted!
+```
+
+**Why this matters:**
+
+```
+In sorted array, minimum difference is between
+CONSECUTIVE elements!
+
+[1, 2, 3, 4, 6]
+ ↑ ↑
+Min diff = 2-1 = 1
+
+[1, 2, 3, 4, 6]
+   ↑ ↑
+Diff = 3-2 = 1
+
+No need to check non-consecutive pairs!
+|6-1| = 5 (larger than consecutive diffs)
+```
+
+**Proof:**
+```
+Array: [a, b, c] (sorted, a < b < c)
+
+Consecutive differences:
+|b - a| = b - a
+|c - b| = c - b
+
+Non-consecutive:
+|c - a| = c - a
+       = (c - b) + (b - a)
+       = |c - b| + |b - a|
+
+Non-consecutive is SUM of two consecutive!
+Therefore larger!
+
+So minimum MUST be between consecutive elements!
+```
+
+#### Approach 1: Inorder to Array, Then Compare
+
+**Algorithm:**
+1. Do inorder traversal → sorted array
+2. Compare consecutive elements
+3. Track minimum difference
+
+```python
+def getMinimumDifference(root: TreeNode) -> int:
+    """
+    Convert to sorted array, compare consecutive
+    
+    Time: O(n)
+    Space: O(n) - array storage
+    """
+    
+    # Step 1: Inorder traversal to get sorted array
+    def inorder(node):
+        if not node:
+            return []
+        return inorder(node.left) + [node.val] + inorder(node.right)
+    
+    arr = inorder(root)
+    
+    # Step 2: Find minimum difference between consecutive elements
+    min_diff = float('inf')
+    
+    for i in range(1, len(arr)):
+        diff = arr[i] - arr[i-1]  # No abs() needed (sorted!)
+        min_diff = min(min_diff, diff)
+    
+    return min_diff
+```
+
+**Why no `abs()`?**
+
+```python
+diff = arr[i] - arr[i-1]
+```
+
+**Because array is sorted:**
+```
+arr[i] > arr[i-1] always!
+(Sorted in ascending order)
+
+So arr[i] - arr[i-1] is always positive
+No need for abs()!
+
+Example: [1, 2, 3]
+2 - 1 = 1 (positive)
+3 - 2 = 1 (positive)
+```
+
+#### Approach 2: Inorder with Previous Tracking (Optimal)
+
+**Key optimization: Don't store entire array!**
+
+```
+Just track previous node value
+Compare with current node
+Update minimum as we go
+
+Space: O(1) instead of O(n)!
+```
+
+```python
+def getMinimumDifference(root: TreeNode) -> int:
+    """
+    Inorder traversal with previous node tracking
+    
+    Time: O(n)
+    Space: O(h) - only recursion stack
+    """
+    
+    self.min_diff = float('inf')
+    self.prev = None  # Track previous node value
+    
+    def inorder(node):
+        if not node:
+            return
+        
+        # Traverse left (smaller values)
+        inorder(node.left)
+        
+        # Process current node
+        if self.prev is not None:
+            # Compare with previous value
+            diff = node.val - self.prev
+            self.min_diff = min(self.min_diff, diff)
+        
+        # Update previous for next node
+        self.prev = node.val
+        
+        # Traverse right (larger values)
+        inorder(node.right)
+    
+    inorder(root)
+    return self.min_diff
+```
+
+**Understanding `self.prev`:**
+
+```python
+self.prev = None  # Initially no previous
+```
+
+**What this tracks:**
+```
+As we do inorder traversal:
+
+Visit 1: prev = None → prev = 1
+Visit 2: prev = 1, compare |2-1|=1 → prev = 2
+Visit 3: prev = 2, compare |3-2|=1 → prev = 3
+...
+
+prev always holds the last visited value
+```
+
+**Why check `if self.prev is not None`?**
+
+```python
+if self.prev is not None:
+    diff = node.val - self.prev
+```
+
+**For the first node:**
+```
+First node has no previous!
+Can't compare
+
+Example: visiting node 1
+prev = None
+if None is not None: False
+Skip comparison
+Update: prev = 1
+
+Second node (value 2):
+prev = 1
+if 1 is not None: True
+Compare: 2 - 1 = 1
+Update: prev = 2
+```
+
+#### Detailed Trace
+
+```python
+Tree:
+      4
+     / \
+    2   6
+   / \
+  1   3
+
+Inorder visits: 1, 2, 3, 4, 6
+
+min_diff = ∞
+prev = None
+
+
+Visit 1:
+  prev is None → skip comparison
+  prev = 1
+  min_diff = ∞
+
+
+Visit 2:
+  prev = 1
+  diff = 2 - 1 = 1
+  min_diff = min(∞, 1) = 1
+  prev = 2
+
+
+Visit 3:
+  prev = 2
+  diff = 3 - 2 = 1
+  min_diff = min(1, 1) = 1
+  prev = 3
+
+
+Visit 4:
+  prev = 3
+  diff = 4 - 3 = 1
+  min_diff = min(1, 1) = 1
+  prev = 4
+
+
+Visit 6:
+  prev = 4
+  diff = 6 - 4 = 2
+  min_diff = min(1, 2) = 1
+  prev = 6
+
+
+Return 1 ✓
+```
+
+**Another example:**
+
+```python
+Tree:
+        5
+       / \
+      3   7
+     /
+    1
+
+Inorder: 1, 3, 5, 7
+
+min_diff = ∞
+prev = None
+
+
+Visit 1:
+  prev = None → skip
+  prev = 1
+  min_diff = ∞
+
+
+Visit 3:
+  prev = 1
+  diff = 3 - 1 = 2
+  min_diff = 2
+  prev = 3
+
+
+Visit 5:
+  prev = 3
+  diff = 5 - 3 = 2
+  min_diff = min(2, 2) = 2
+  prev = 5
+
+
+Visit 7:
+  prev = 5
+  diff = 7 - 5 = 2
+  min_diff = min(2, 2) = 2
+  prev = 7
+
+
+Return 2 ✓
+```
+
+#### Alternative: Using List Instead of self.prev
+
+```python
+def getMinimumDifference(root: TreeNode) -> int:
+    """
+    Using list to track previous (mutable in closure)
+    """
+    
+    min_diff = [float('inf')]
+    prev = [None]
+    
+    def inorder(node):
+        if not node:
+            return
+        
+        inorder(node.left)
+        
+        if prev[0] is not None:
+            diff = node.val - prev[0]
+            min_diff[0] = min(min_diff[0], diff)
+        
+        prev[0] = node.val
+        
+        inorder(node.right)
+    
+    inorder(root)
+    return min_diff[0]
+```
+
+**Why use list?**
+
+```python
+prev = [None]  # List is mutable
+
+def inorder(node):
+    prev[0] = node.val  # Can modify list contents
+```
+
+**Without list (doesn't work):**
+
+```python
+prev = None  # Variable
+
+def inorder(node):
+    prev = node.val  # Creates NEW local variable!
+    # Doesn't modify outer prev!
+```
+
+**Options to modify outer variable:**
+1. Use `self.prev` (class variable)
+2. Use list `prev = [None]` (mutable object)
+3. Use `nonlocal prev` keyword
+
+#### Edge Cases
+
+**Edge Case 1: Two nodes**
+```python
+root = [1,null,3]
+
+Tree:
+  1
+   \
+    3
+
+Inorder: [1, 3]
+Diff: 3 - 1 = 2
+Output: 2
+```
+
+**Edge Case 2: All same differences**
+```python
+root = [1,2,3,4,5]
+
+Tree:
+    1
+     \
+      2
+       \
+        3
+         \
+          4
+           \
+            5
+
+Inorder: [1,2,3,4,5]
+All diffs: 1
+Output: 1
+```
+
+**Edge Case 3: Minimum at different locations**
+```python
+root = [10,5,15,2,7,null,20]
+
+Tree:
+        10
+       /  \
+      5    15
+     / \     \
+    2   7    20
+
+Inorder: [2,5,7,10,15,20]
+Diffs: 3,2,3,5,5
+Minimum: 2
+Output: 2
+```
+
+#### Common Mistakes
+
+**Mistake 1: Using abs() when not needed**
+```python
+# WRONG (not wrong, just unnecessary)
+diff = abs(node.val - self.prev)
+
+# RIGHT (simpler)
+diff = node.val - self.prev
+# Always positive due to inorder!
+```
+
+**Mistake 2: Not initializing prev correctly**
+```python
+# WRONG
+self.prev = 0  # What if all values negative?
+
+# RIGHT
+self.prev = None  # Check if None before comparing
+```
+
+**Mistake 3: Comparing with wrong previous**
+```python
+# WRONG
+if node.left:
+    diff = node.val - node.left.val
+    # Only compares parent-child!
+    # Misses other consecutive pairs!
+
+# RIGHT
+# Use inorder traversal
+# Compares ALL consecutive pairs in sorted order
+```
+
+**Mistake 4: Forgetting to update prev**
+```python
+# WRONG
+def inorder(node):
+    ...
+    if self.prev is not None:
+        diff = node.val - self.prev
+        self.min_diff = min(self.min_diff, diff)
+    # Forgot: self.prev = node.val
+
+# RIGHT
+self.prev = node.val  # Update for next node!
+```
+
+#### Time & Space Complexity
+
+**Approach 1 (Array):**
+```
+Time: O(n) - inorder traversal + linear scan
+Space: O(n) - store array
+```
+
+**Approach 2 (Previous tracking):**
+```
+Time: O(n) - single inorder traversal
+Space: O(h) - only recursion stack
+         O(log n) balanced
+         O(n) skewed
+
+Better space complexity! ✓
+```
+
+---
+
