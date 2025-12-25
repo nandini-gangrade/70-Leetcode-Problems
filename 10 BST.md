@@ -3223,3 +3223,1101 @@ Better space complexity! ✓
 
 ---
 
+### Problem 7: Balance a Binary Search Tree
+
+**[LeetCode 1382 - Balance a Binary Search Tree](https://leetcode.com/problems/balance-a-binary-search-tree/)**
+
+#### Problem Statement
+
+Given the `root` of a binary search tree, return a **balanced** binary search tree with the same node values. If there is more than one answer, return any of them.
+
+A binary search tree is **balanced** if the depth of the two subtrees of every node never differs by more than 1.
+
+**Example 1:**
+```
+Input: root = [1,null,2,null,3,null,4]
+
+Before:
+    1
+     \
+      2
+       \
+        3
+         \
+          4
+
+After:
+      2
+     / \
+    1   3
+         \
+          4
+
+OR:
+      3
+     / \
+    2   4
+   /
+  1
+
+Output: [2,1,3,null,null,null,4] (or [3,2,4,1])
+```
+
+#### Understanding the Problem
+
+**What is "balanced"?**
+
+```
+Balanced:
+      2
+     / \
+    1   3
+
+Heights: left=1, right=1
+Difference: 0 ≤ 1 ✓
+
+
+Not balanced:
+    1
+     \
+      2
+       \
+        3
+
+Heights: left=0, right=2
+Difference: 2 > 1 ✗
+```
+
+**Why trees become unbalanced:**
+
+```
+Insert in sorted order:
+
+Insert 1: [1]
+Insert 2: [1,2]
+Insert 3: [1,2,3]
+
+Tree becomes:
+    1
+     \
+      2
+       \
+        3
+
+Completely unbalanced!
+Operations: O(n) instead of O(log n)
+```
+
+#### Key Insight: Inorder + Rebuild
+
+**Two-step process:**
+
+1. **Extract sorted values** (inorder traversal)
+2. **Rebuild balanced BST** (like Problem 3!)
+
+```
+Step 1: Inorder
+    1
+     \
+      2
+       \
+        3
+         \
+          4
+
+Inorder: [1, 2, 3, 4]
+
+
+Step 2: Rebuild balanced
+[1, 2, 3, 4]
+
+Middle = 2
+      2
+     / \
+    1   3
+         \
+          4
+
+Balanced! ✓
+```
+
+**Why this works:**
+
+```
+Inorder → Sorted array (BST property)
+Sorted array → Balanced BST (middle selection)
+
+Same as "Convert Sorted Array to BST" problem!
+```
+
+#### Solution
+
+```python
+def balanceBST(root: TreeNode) -> TreeNode:
+    """
+    Balance BST using inorder + rebuild
+    
+    Time: O(n)
+    Space: O(n)
+    """
+    
+    # Step 1: Inorder traversal to get sorted array
+    def inorder(node):
+        """Get sorted array of values"""
+        if not node:
+            return []
+        
+        # Left → Root → Right
+        return inorder(node.left) + [node.val] + inorder(node.right)
+    
+    # Step 2: Build balanced BST from sorted array
+    def buildBalanced(left, right):
+        """Build balanced BST from array[left:right+1]"""
+        # Base case: invalid range
+        if left > right:
+            return None
+        
+        # Find middle
+        mid = (left + right) // 2
+        
+        # Create root with middle value
+        root = TreeNode(sorted_vals[mid])
+        
+        # Recursively build left and right subtrees
+        root.left = buildBalanced(left, mid - 1)
+        root.right = buildBalanced(mid + 1, right)
+        
+        return root
+    
+    # Execute two steps
+    sorted_vals = inorder(root)
+    return buildBalanced(0, len(sorted_vals) - 1)
+```
+
+**Understanding each step:**
+
+```python
+sorted_vals = inorder(root)
+```
+**What this does:**
+```
+Extract all values in sorted order
+
+Tree:
+    4
+   / \
+  2   6
+ / \
+1   3
+
+Inorder: [1, 2, 3, 4, 6]
+```
+
+```python
+return buildBalanced(0, len(sorted_vals) - 1)
+```
+**What this does:**
+```
+Build balanced BST from entire array
+
+[1, 2, 3, 4, 6]
+indices: 0-4
+
+Middle: 2 (value 3)
+      3
+     / \
+  [1,2] [4,6]
+```
+
+#### Detailed Trace
+
+```python
+Tree:
+    1
+     \
+      2
+       \
+        3
+         \
+          4
+
+Step 1: Inorder
+sorted_vals = [1, 2, 3, 4]
+
+
+Step 2: buildBalanced(0, 3)
+│ left=0, right=3
+│ mid = (0+3)//2 = 1
+│ root = TreeNode(2)
+│
+├─ buildBalanced(0, 0)
+│  │ left=0, right=0
+│  │ mid = 0
+│  │ root = TreeNode(1)
+│  │
+│  ├─ buildBalanced(0, -1) → None
+│  └─ buildBalanced(1, 0) → None
+│  │
+│  Return TreeNode(1)
+│
+└─ buildBalanced(2, 3)
+   │ left=2, right=3
+   │ mid = (2+3)//2 = 2
+   │ root = TreeNode(3)
+   │
+   ├─ buildBalanced(2, 1) → None
+   └─ buildBalanced(3, 3)
+      │ left=3, right=3
+      │ mid = 3
+      │ root = TreeNode(4)
+      │
+      ├─ buildBalanced(3, 2) → None
+      └─ buildBalanced(4, 3) → None
+      │
+      Return TreeNode(4)
+   │
+   Return TreeNode(3) with right child 4
+│
+Return TreeNode(2) with children
+
+Final tree:
+      2
+     / \
+    1   3
+         \
+          4
+
+Height difference at each node ≤ 1 ✓
+```
+
+#### Alternative: In-place Balancing (More Complex)
+
+**Using Day-Stout-Warren (DSW) Algorithm:**
+
+This is more advanced and rarely asked in interviews.
+
+```python
+def balanceBST_DSW(root: TreeNode) -> TreeNode:
+    """
+    Balance in-place using rotations
+    More complex, O(1) extra space
+    """
+    # Convert to vine (right-skewed)
+    # Then apply rotations
+    # Not covering in detail - rarely needed
+```
+
+**Why inorder + rebuild is preferred:**
+```
+✓ Simple to understand
+✓ Easy to implement
+✓ Same time complexity
+✗ Uses O(n) space (but acceptable)
+
+DSW algorithm:
+✓ O(1) space
+✗ Much more complex
+✗ Rarely asked in interviews
+```
+
+#### Visualization of Balancing
+
+```
+Original (unbalanced):
+    1
+     \
+      2
+       \
+        3
+         \
+          4
+           \
+            5
+
+Height: 5
+Operations: O(n)
+
+
+After balancing:
+      3
+     / \
+    2   4
+   /     \
+  1       5
+
+Height: 3
+Operations: O(log n)
+
+
+Why balanced is better:
+Search for 5:
+Unbalanced: 5 comparisons
+Balanced: 2 comparisons
+
+Huge difference for large trees!
+```
+
+#### Edge Cases
+
+**Edge Case 1: Already balanced**
+```python
+root = [2,1,3]
+
+Tree:
+    2
+   / \
+  1   3
+
+Already balanced!
+Output: Same tree (or equivalent)
+```
+
+**Edge Case 2: Single node**
+```python
+root = [1]
+
+Tree:
+  1
+
+Already balanced!
+Output: [1]
+```
+
+**Edge Case 3: Completely skewed left**
+```python
+root = [4,3,null,2,null,1]
+
+Tree:
+      4
+     /
+    3
+   /
+  2
+ /
+1
+
+Inorder: [1,2,3,4]
+
+After balancing:
+      2
+     / \
+    1   3
+         \
+          4
+
+OR:
+      3
+     / \
+    2   4
+   /
+  1
+```
+
+**Edge Case 4: Two nodes**
+```python
+root = [1,null,2]
+
+Tree:
+  1
+   \
+    2
+
+Balanced? Yes (height diff = 1)
+But could also return:
+    2
+   /
+  1
+```
+
+#### Common Mistakes
+
+**Mistake 1: Modifying original tree incorrectly**
+```python
+# WRONG - trying to balance in-place without proper algorithm
+def balanceBST(root):
+    # Can't just rearrange pointers randomly!
+    # Need systematic approach
+
+# RIGHT - extract values, rebuild
+```
+
+**Mistake 2: Not using inorder**
+```python
+# WRONG
+def getValues(node):
+    if not node:
+        return []
+    return [node.val] + getValues(node.left) + getValues(node.right)
+    # Preorder - not sorted!
+
+# RIGHT
+return inorder(node.left) + [node.val] + inorder(node.right)
+# Inorder - sorted!
+```
+
+**Mistake 3: Building unbalanced tree from sorted array**
+```python
+# WRONG
+def buildTree(arr):
+    if not arr:
+        return None
+    root = TreeNode(arr[0])  # Always use first element
+    root.right = buildTree(arr[1:])
+    return root
+    # Creates right-skewed tree!
+
+# RIGHT
+mid = len(arr) // 2
+root = TreeNode(arr[mid])  # Use middle element
+```
+
+#### Time & Space Complexity
+
+**Time Complexity: O(n)**
+```
+Step 1: Inorder traversal
+- Visit each node once: O(n)
+
+Step 2: Build balanced tree
+- Create each node once: O(n)
+
+Total: O(n) + O(n) = O(n)
+```
+
+**Space Complexity: O(n)**
+```
+Array to store values: O(n)
+Recursion depth: O(log n) for balanced tree
+Total: O(n)
+
+Call stack during build:
+buildBalanced(0, n-1)
+  buildBalanced(0, n/2)
+    buildBalanced(0, n/4)
+      ...
+
+Depth = log n (balanced tree)
+But array storage dominates: O(n)
+```
+
+---
+
+### Problem 8: Delete Node in a BST
+
+**[LeetCode 450 - Delete Node in a BST](https://leetcode.com/problems/delete-node-in-a-bst/)**
+
+#### Problem Statement
+
+Given a root node reference of a BST and a key, delete the node with the given key in the BST. Return the root node reference (possibly updated) of the BST.
+
+Basically, the deletion can be divided into two stages:
+1. Search for the node to remove
+2. If the node is found, delete it
+
+**Example 1:**
+```
+Input: root = [5,3,6,2,4,null,7], key = 3
+
+Before:
+      5
+     / \
+    3   6
+   / \   \
+  2   4   7
+
+After:
+      5
+     / \
+    4   6
+   /     \
+  2       7
+
+(Could also be other valid BSTs)
+
+Output: [5,4,6,2,null,null,7]
+```
+
+#### Understanding the Problem
+
+**Deletion is hardest BST operation!**
+
+Why? Need to maintain BST property after removal.
+
+**Three cases based on node's children:**
+
+```
+Case 1: Node has NO children (leaf)
+        → Simply remove it
+
+      5
+     / \
+    3   6
+   /
+  2  ← Delete 2
+
+Result:
+      5
+     / \
+    3   6
+
+Easy! Just set parent's pointer to None
+
+
+Case 2: Node has ONE child
+        → Replace node with its child
+
+      5
+     / \
+    3   6
+   /
+  2  ← Delete 3
+
+Result:
+      5
+     / \
+    2   6
+
+Replace 3 with its child (2)
+
+
+Case 3: Node has TWO children
+        → Most complex!
+
+      5
+     / \
+    3   6  ← Delete 5
+   / \   \
+  2   4   7
+
+Can't just replace with one child
+Need to find successor or predecessor
+```
+
+#### Case 3 Detailed: Two Children
+
+**Two strategies:**
+
+**Strategy 1: Use inorder successor**
+```
+Inorder successor = smallest node in RIGHT subtree
+
+      5  ← Delete this
+     / \
+    3   6
+   / \   \
+  2   4   7
+
+Inorder: [2, 3, 4, 5, 6, 7]
+                    ↑  ↑
+                    5  6
+Successor of 5 = 6
+
+Replace 5 with 6:
+      6
+     / \
+    3   ?
+   / \   \
+  2   4   7
+
+Then delete 6 from right subtree
+```
+
+**Strategy 2: Use inorder predecessor**
+```
+Inorder predecessor = largest node in LEFT subtree
+
+      5  ← Delete this
+     / \
+    3   6
+   / \   \
+  2   4   7
+
+Inorder: [2, 3, 4, 5, 6, 7]
+             ↑  ↑
+             4  5
+Predecessor of 5 = 4
+
+Replace 5 with 4:
+      4
+     / \
+    3   6
+   /     \
+  2       7
+
+Then delete 4 from left subtree
+```
+
+**We'll use successor (Strategy 1).**
+
+#### Finding Inorder Successor
+
+**Inorder successor = smallest in right subtree**
+
+How to find smallest?
+→ Keep going LEFT!
+
+```python
+def findMin(node):
+    """Find minimum value node in subtree"""
+    current = node
+    while current.left:
+        current = current.left
+    return current
+```
+
+**Visual:**
+```
+Right subtree:
+      6
+       \
+        7
+
+Go left: No left child
+Minimum: 6
+
+
+Right subtree:
+      10
+     /  \
+    8    12
+   / \
+  7   9
+
+Go left from 10 → 8
+Go left from 8 → 7
+No more left
+Minimum: 7
+```
+
+#### Solution
+
+```python
+def deleteNode(root: TreeNode, key: int) -> TreeNode:
+    """
+    Delete node with given key from BST
+    
+    Time: O(h) where h = height
+    Space: O(h) - recursion depth
+    """
+    
+    # Base case: empty tree
+    if not root:
+        return None
+    
+    # Step 1: Find the node to delete
+    if key < root.val:
+        # Key is in left subtree
+        root.left = deleteNode(root.left, key)
+    
+    elif key > root.val:
+        # Key is in right subtree
+        root.right = deleteNode(root.right, key)
+    
+    else:
+        # Found the node to delete!
+        
+        # Case 1: No left child
+        if not root.left:
+            return root.right
+        
+        # Case 2: No right child
+        elif not root.right:
+            return root.left
+        
+        # Case 3: Two children
+        else:
+            # Find inorder successor (minimum in right subtree)
+            successor = findMin(root.right)
+            
+            # Replace current node's value with successor's value
+            root.val = successor.val
+            
+            # Delete the successor from right subtree
+            root.right = deleteNode(root.right, successor.val)
+    
+    return root
+
+
+def findMin(node: TreeNode) -> TreeNode:
+    """Find node with minimum value in subtree"""
+    current = node
+    while current.left:
+        current = current.left
+    return current
+```
+
+**Understanding each part:**
+
+```python
+if key < root.val:
+    root.left = deleteNode(root.left, key)
+```
+**What this does:**
+```
+Key is smaller than current node
+Must be in left subtree
+Recursively delete from left
+Update left child pointer
+```
+
+```python
+elif key > root.val:
+    root.right = deleteNode(root.right, key)
+```
+**What this does:**
+```
+Key is larger than current node
+Must be in right subtree
+Recursively delete from right
+Update right child pointer
+```
+
+```python
+else:
+    # Found the node!
+```
+**What this does:**
+```
+Current node is the one to delete
+Handle three cases based on children
+```
+
+```python
+if not root.left:
+    return root.right
+```
+**What this does:**
+```
+No left child (or no children at all)
+
+If no left child, return right child
+(Even if right is also None)
+
+Examples:
+
+Leaf (no children):
+    5
+   
+left=None, right=None
+Return None ✓
+
+One child (right):
+    5
+     \
+      7
+      
+left=None, right=7
+Return 7 ✓
+```
+
+```python
+elif not root.right:
+    return root.left
+```
+**What this does:**
+```
+No right child (but has left child)
+
+One child (left):
+    5
+   /
+  3
+  
+left=3, right=None
+Return 3 ✓
+```
+
+```python
+else:
+    # Two children
+    successor = findMin(root.right)
+    root.val = successor.val
+    root.right = deleteNode(root.right, successor.val)
+```
+**What this does:**
+```
+Has both children
+
+Step 1: Find successor
+successor = smallest in right subtree
+
+Step 2: Copy successor's value to current
+root.val = successor.val
+
+Step 3: Delete successor from right subtree
+root.right = deleteNode(root.right, successor.val)
+
+Why this works:
+- Successor is in right subtree
+- Successor is smallest in right subtree
+- After copying value, delete original successor
+- Successor has at most one child (no left child)
+  (If it had left child, that would be smaller!)
+```
+
+#### Detailed Trace
+
+```python
+Tree:
+      5
+     / \
+    3   6
+   / \   \
+  2   4   7
+
+Delete key = 3
+
+
+deleteNode(5, 3):
+│ 3 < 5, go left
+│ root.left = deleteNode(3, 3)
+│   │
+│   deleteNode(3, 3):
+│   │ Found it! (3 == 3)
+│   │ 
+│   │ Check children:
+│   │ root.left = 2 (exists)
+│   │ root.right = 4 (exists)
+│   │ → Two children!
+│   │
+│   │ Find successor in right subtree:
+│   │ findMin(4)
+│   │   4 has no left child
+│   │   Return 4
+│   │ successor = 4
+│   │
+│   │ Replace value:
+│   │ root.val = 4
+│   │ Tree now:
+│   │       5
+│   │      / \
+│   │     4   6
+│   │    / \   \
+│   │   2   4   7
+│   │       ↑
+│   │   Delete this duplicate
+│   │
+│   │ Delete successor:
+│   │ root.right = deleteNode(4, 4)
+│   │   │
+│   │   deleteNode(4, 4):
+│   │   │ Found it!
+│   │   │ left=None, right=None
+│   │   │ Return None
+│   │   
+│   │ root.right = None
+│   │ 
+│   │ Return updated node:
+│   │       4
+│   │      /
+│   │     2
+│   
+│ root.left = 4 (with child 2)
+│
+Return 5 with updated left subtree
+
+Final tree:
+      5
+     / \
+    4   6
+   /     \
+  2       7
+```
+
+**Another example: Delete leaf**
+
+```python
+Tree:
+      5
+     / \
+    3   6
+   / \   \
+  2   4   7
+
+Delete key = 2
+
+
+deleteNode(5, 2):
+│ 2 < 5, go left
+│ root.left = deleteNode(3, 2)
+│   │
+│   deleteNode(3, 2):
+│   │ 2 < 3, go left
+│   │ root.left = deleteNode(2, 2)
+│   │   │
+│   │   deleteNode(2, 2):
+│   │   │ Found it!
+│   │   │ left=None, right=None
+│   │   │ Return None
+│   │   
+│   │ root.left = None
+│   │ Return 3 with left=None
+│   
+│ root.left = updated 3
+│
+Return 5
+
+Final tree:
+      5
+     / \
+    3   6
+     \   \
+      4   7
+```
+
+#### Why Successor Has At Most One Child
+
+**Key insight:**
+
+```
+Successor = smallest in right subtree
+          = leftmost node in right subtree
+
+If successor had left child:
+    successor
+       /
+    smaller
+
+But "smaller" would be smaller than successor!
+Contradiction! (successor should be smallest)
+
+Therefore: Successor has NO left child
+          (Can have right child though)
+
+Example:
+      10
+     /  \
+    5    15
+        /  \
+       12   20
+         \
+          13
+
+Successor of 10 = 12
+12 has no left child ✓
+12 has right child (13) ✓
+```
+
+#### Edge Cases
+
+**Edge Case 1: Delete root (leaf)**
+```python
+root = [1], key = 1
+
+deleteNode(1, 1):
+Found it!
+No children
+Return None
+
+Output: None (empty tree)
+```
+
+**Edge Case 2: Delete node not in tree**
+```python
+root = [5,3,6], key = 10
+
+deleteNode(5, 10):
+10 > 5, go right
+deleteNode(6, 10):
+10 > 6, go right
+deleteNode(None, 10):
+Return None
+
+Root unchanged
+Output: [5,3,6]
+```
+
+**Edge Case 3: Delete root with two children**
+```python
+root = [5,3,6,2,4,null,7], key = 5
+
+Find successor = 6
+Replace 5 with 6
+Delete 6 from right subtree
+
+Output: [6,3,7,2,4]
+```
+
+#### Common Mistakes
+
+**Mistake 1: Not returning updated root**
+```python
+# WRONG
+def deleteNode(root, key):
+    if key < root.val:
+        deleteNode(root.left, key)  # Forgot to assign!
+    ...
+
+# RIGHT
+root.left = deleteNode(root.left, key)
+```
+
+**Mistake 2: Deleting successor incorrectly**
+```python
+# WRONG
+root.val = successor.val
+# Forgot to delete successor!
+
+# RIGHT
+root.val = successor.val
+root.right = deleteNode(root.right, successor.val)
+```
+
+**Mistake 3: Not handling two children case**
+```python
+# WRONG
+if not root.left:
+    return root.right
+if not root.right:
+    return root.left
+# What if both exist?
+
+# RIGHT
+if not root.left:
+    return root.right
+elif not root.right:
+    return root.left
+else:
+    # Handle two children
+```
+
+**Mistake 4: Finding predecessor instead of successor**
+```python
+# Different but also valid
+# Just be consistent!
+
+# Using successor (in right subtree):
+successor = findMin(root.right)
+
+# Using predecessor (in left subtree):
+predecessor = findMax(root.left)
+
+# Both work, but don't mix!
+```
+
+#### Time & Space Complexity
+
+**Time Complexity: O(h)**
+```
+h = height of tree
+
+Search for node: O(h)
+Find successor: O(h)
+Delete successor: O(h)
+
+Total: O(h)
+
+Balanced: O(log n)
+Skewed: O(n)
+```
+
+**Space Complexity: O(h)**
+```
+Recursion depth = height
+
+Balanced: O(log n)
+Skewed: O(n)
+```
+
+---
+
