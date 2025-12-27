@@ -1,6 +1,8 @@
 # 70-Leetcode-Problems -> [Website (Track Your Progress 👁)](https://claude.ai/public/artifacts/c8114343-98b7-442b-a5f4-e3368246412a?fullscreen=true)
 [![Watch on YouTube](https://img.youtube.com/vi/lvO88XxNAzs/maxresdefault.jpg)](https://youtu.be/lvO88XxNAzs)
 
+[Solve Here 🏃‍♀️](https://claude.ai/public/artifacts/97113e50-80f8-4cbb-b680-547c6a08f2ca)
+
 70 LeetCode problems across all major data structures, serving as a complete interview preparation guide. Below is the structured breakdown:
 
 ---
